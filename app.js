@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
 const app = express();
+const vendorRoutes = require('./routes/vendorRoutes');
+const errorController = require('./controllers/errorController');
 
 app.use(
   express.json({
@@ -21,8 +23,7 @@ app.use(limiter);
 app.use(hpp());
 app.use(cors());
 
-app.get('/', async (req, res) => {
-  res.send('Hello world');
-});
+app.use('/api/v1/vendor', vendorRoutes);
 
+app.use('*', errorController);
 module.exports = app;
