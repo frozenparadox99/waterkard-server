@@ -1,33 +1,35 @@
+<!-- prettier-ignore -->
 #### Planned Routes and Requirement
 
 #### Vendors
 
 ##### Post Routes
 
-- **Auth**
+1. **Auth**
+
 - _/vendor/auth/register_ : Register a new vendor
 - Request
 
-```javascript
+```json
 {
-    "coolJarStock": 10,
-    "bottleJarStock": 11,
-    "defaultGroupName":"Group 1",
-    "firstDriverName":"John Doe",
-    "firstDriverPhoneNumber":"+919991112223",
-    "fullBusinessName":"Bizness",
-    "brandName":"Nike",
-    "mobileNumber":"Bizness",
-    "country":"India",
-    "city":"Mumbai",
-    "state":"Maharashtra",
-    "fullVendorName": "vendorxyz"
+  "coolJarStock": 10,
+  "bottleJarStock": 11,
+  "defaultGroupName": "Group 1",
+  "firstDriverName": "John Doe",
+  "firstDriverPhoneNumber": "+919991112223",
+  "fullBusinessName": "Bizness",
+  "brandName": "Nike",
+  "mobileNumber": "Bizness",
+  "country": "India",
+  "city": "Mumbai",
+  "state": "Maharashtra",
+  "fullVendorName": "vendorxyz"
 }
 ```
 
 - Response
 
-```javascript
+```json
 {
   "success": true,
   "data": {
@@ -53,25 +55,37 @@
 }
 ```
 
-**Inventory**
+2. **Inventory**
 
 - _/vendor/inventory/daily-load_ : Jars loaded for the day
 - _/vendor/inventory/daily-unload_ : Jars unloaded for the day
 - _/vendor/inventory/total-add-stock_ : Add jars in stock
 - _/vendor/inventory/total-remove-stock_ : Remove jars from stock
-  **Customer**
+
+3.  **Customer**
+
 - _/vendor/customer_ : Create customer for vendor
 - _/vendor/customer/add-product_ : Add product to customer's usual request
-  **Group**
+
+4.  **Group**
+
 - _/vendor/group_ : Create a group for the vendor (Each group will have a driver)
-  **Driver**
+
+5.  **Driver**
+
 - _/vendor/driver_ : Add driver
-  **Order**
+
+6.  **Order**
+
 - _/vendor/order_ : Create order
-  **Product**
+
+7.  **Product**
+
 - _/vendor/product_ : Add product (18L or 20L)
 - _/vendor/dispenser_ : Add dispenser
-  **Payments**
+
+8.  **Payments**
+
 - _/vendor/customer/payment_ : Create payment for customer
 - _/vendor/driver/payment_ : Create payment for driver
 - _/vendor/customer/deposit_ : Deposit advance from customer
