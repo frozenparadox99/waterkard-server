@@ -1,5 +1,5 @@
 <!-- prettier-ignore -->
-#### Planned Routes and Requirement
+#### Planned Routes and Requirements
 
 #### Vendors
 
