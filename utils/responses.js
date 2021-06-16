@@ -2,20 +2,28 @@ const responses = {
   successfulRequest: (res, status, data) =>
     res.status(status).json({
       success: true,
-      data: {
-        ...data,
-      },
+      data,
     }),
   failedRequest: (res, status, message) =>
     res.status(status).json({
       success: false,
       message,
     }),
+  failedRequestWithData: (res, status, data) => {
+    res.status(status).json({
+      success: false,
+      data,
+    });
+  },
+  failedRequestWithErrors: (res, status, errors) => {
+    res.status(status).json({
+      success: false,
+      errors,
+    });
+  },
   successfulCall: data => ({
     success: true,
-    data: {
-      ...data,
-    },
+    data,
   }),
   failedCall: message => ({
     success: false,

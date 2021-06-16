@@ -17,26 +17,8 @@ const auth = {
       country,
       city,
       state,
-    } = req.body;
-    let { brandName } = req.body;
-    brandName = brandName.trim();
-    const requiredKeys = [
-      coolJarStock,
-      bottleJarStock,
-      defaultGroupName,
-      firstDriverName,
-      firstDriverPhoneNumber,
-      fullBusinessName,
-      fullVendorName,
       brandName,
-      mobileNumber,
-      country,
-      city,
-      state,
-    ];
-    if (requiredKeys.filter(el => !el).length > 0) {
-      return next(new APIError('Incomplete data for vendor', 400));
-    }
+    } = req.body;
     const vendorRef = await db
       .collection('vendors')
       .add({
