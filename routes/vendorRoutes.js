@@ -4,6 +4,7 @@ const vendorController = require('../controllers/vendor');
 const vendorValidators = require('../middlewares/validators/vendor');
 const customerValidators = require('../middlewares/validators/customer');
 const customerProductValidators = require('../middlewares/validators/customerProduct');
+const groupValidators = require('../middlewares/validators/group');
 
 router.post(
   '/auth/register',
@@ -22,5 +23,7 @@ router.post(
   customerProductValidators.addCustomerProduct,
   vendorController.addCustomerProduct
 );
+
+router.post('/group', groupValidators.addGroup, vendorController.addGroup);
 
 module.exports = router;
