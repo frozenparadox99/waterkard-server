@@ -5,6 +5,7 @@ const catchAsync = require('../../utils/catchAsync');
 const Vendor = require('../../models/vendorModel');
 const Driver = require('../../models/driverModel');
 const Group = require('../../models/groupModel');
+const TotalInventory = require('../../models/totalInventoryModel');
 
 const { successfulRequest } = require('../../utils/responses');
 
@@ -48,7 +49,7 @@ const auth = {
         { session: session }
       );
 
-      console.log(vendor);
+      // console.log(vendor);
 
       const group = await Group.create(
         [
@@ -74,6 +75,22 @@ const auth = {
         { session: session }
       );
 
+      const totalInventory = await TotalInventory.create(
+        [
+          {
+            vendor: vendor[0]._id,
+            stock: [
+              {
+                coolJarStock,
+                bottleJarStock,
+                dateAdded: Date.now(),
+              },
+            ],
+          },
+        ],
+        { session: session }
+      );
+
       // commit the changes if everything was successful
       await session.commitTransaction();
     } catch (error) {
@@ -83,7 +100,7 @@ const auth = {
       await session.abortTransaction();
 
       // logging the error
-      console.error('-----------------------------------');
+      // console.error('-----------------------------------');
       console.error(error);
 
       // rethrow the error
