@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const { failedRequestWithErrors } = require('../../utils/responses');
 
 const customerValidators = {
-  createCustomer: (req, res, next) => {
+  registerCustomer: (req, res, next) => {
     const schema = Joi.object({
       typeOfCustomer: Joi.string()
         .required()
@@ -74,7 +74,7 @@ const customerValidators = {
         }),
       address: Joi.object({
         type: Joi.string().required().valid('Point'),
-        coordinate: Joi.array().length(2).items(Joi.number()),
+        coordinates: Joi.array().length(2).items(Joi.number()),
       })
         .required()
         .error(errors => {
