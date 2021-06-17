@@ -23,7 +23,7 @@ const customer = {
       vendor,
       product,
       balanceJars,
-      dispensers,
+      dispenser,
       deposit,
       rate,
     } = req.body;
@@ -56,7 +56,7 @@ const customer = {
           {
             product,
             balanceJars,
-            dispensers,
+            dispenser,
             deposit,
             rate,
             customer: customer[0]._id,
