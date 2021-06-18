@@ -89,7 +89,7 @@ const customerController = {
 
     // 1) Get products for the current customer
     const currentProductsForCustomer = await CustomerProduct.find({
-      id: customer._id,
+      customer,
     });
     console.log(currentProductsForCustomer);
 
