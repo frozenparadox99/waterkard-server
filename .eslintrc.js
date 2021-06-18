@@ -1,7 +1,6 @@
 module.exports = {
   env: {
-    browser: false,
-    commonjs: true,
+    node: true,
     es2021: true,
   },
   extends: ['airbnb', 'prettier', 'plugin:node/recommended'],
