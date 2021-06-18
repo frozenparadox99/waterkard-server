@@ -6,6 +6,7 @@ const customerValidators = require('../middlewares/validators/customer');
 const customerProductValidators = require('../middlewares/validators/customerProduct');
 const groupValidators = require('../middlewares/validators/group');
 const driverValidators = require('../middlewares/validators/driver');
+const orderValidators = require('../middlewares/validators/order');
 
 router.post(
   '/auth/register',
@@ -28,5 +29,7 @@ router.post(
 router.post('/group', groupValidators.addGroup, vendorController.addGroup);
 
 router.post('/driver', driverValidators.addDriver, vendorController.addDriver);
+
+router.post('/order', orderValidators.addOrder, vendorController.addOrder);
 
 module.exports = router;
