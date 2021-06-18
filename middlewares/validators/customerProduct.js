@@ -2,8 +2,8 @@ const Joi = require('joi');
 const mongoose = require('mongoose');
 const { failedRequestWithErrors } = require('../../utils/responses');
 
-const customerValidators = {
-  createCustomer: (req, res, next) => {
+const customerProductValidators = {
+  addCustomerProduct: (req, res, next) => {
     const schema = Joi.object({
       product: Joi.string()
         .required()
@@ -131,4 +131,4 @@ const customerValidators = {
   },
 };
 
-module.exports = customerValidators;
+module.exports = customerProductValidators;
