@@ -73,7 +73,7 @@ const authController = {
         { session }
       );
 
-      const currDate = Date.now();
+      const currDate = new Date(new Date().toDateString());
 
       const totalInventory = await TotalInventory.create(
         [
