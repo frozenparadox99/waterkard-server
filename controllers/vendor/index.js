@@ -3,6 +3,7 @@ const customerController = require('./customer');
 const groupController = require('./group');
 const driverController = require('./driver');
 const orderController = require('./order');
+const inventoryController = require('./inventory');
 
 const controller = {
   registerVendor: authController.registerVendor,
@@ -11,6 +12,7 @@ const controller = {
   addGroup: groupController.addGroup,
   addDriver: driverController.addDriver,
   addOrder: orderController.addOrder,
+  addTotalInventory: inventoryController.addTotalInventory,
 };
 
 module.exports = controller;

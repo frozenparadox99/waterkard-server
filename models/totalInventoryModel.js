@@ -23,6 +23,21 @@ const totalInventorySchema = new mongoose.Schema(
         },
       },
     ],
+    removedStock: [
+      {
+        coolJarStock: {
+          type: Number,
+          default: 0,
+        },
+        bottleJarStock: {
+          type: Number,
+          default: 0,
+        },
+        dateAdded: {
+          type: Date,
+        },
+      },
+    ],
   },
   {
     versionKey: false,

@@ -73,6 +73,8 @@ const authController = {
         { session }
       );
 
+      const currDate = Date.now();
+
       const totalInventory = await TotalInventory.create(
         [
           {
@@ -81,7 +83,14 @@ const authController = {
               {
                 coolJarStock,
                 bottleJarStock,
-                dateAdded: Date.now(),
+                dateAdded: currDate,
+              },
+            ],
+            removedStock: [
+              {
+                coolJarStock: 0,
+                bottleJarStock: 0,
+                dateAdded: currDate,
               },
             ],
           },
