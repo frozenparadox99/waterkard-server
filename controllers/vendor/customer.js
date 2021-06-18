@@ -1,13 +1,11 @@
 const mongoose = require('mongoose');
-const APIError = require('../../utils/apiError');
-const catchAsync = require('../../utils/catchAsync');
-
 const Customer = require('../../models/customerModel');
 const CustomerProduct = require('../../models/customerProductModel');
-
+const catchAsync = require('../../utils/catchAsync');
+const APIError = require('../../utils/apiError');
 const { successfulRequest } = require('../../utils/responses');
 
-const customer = {
+const customerController = {
   registerCustomer: catchAsync(async (req, res, next) => {
     const {
       typeOfCustomer,
@@ -47,7 +45,7 @@ const customer = {
             vendor,
           },
         ],
-        { session: session }
+        { session }
       );
 
       const customerProduct = await CustomerProduct.create(
@@ -61,7 +59,7 @@ const customer = {
             customer: customer[0]._id,
           },
         ],
-        { session: session }
+        { session }
       );
 
       // commit the changes if everything was successful
@@ -90,7 +88,9 @@ const customer = {
       req.body;
 
     // 1) Get products for the current customer
-    let currentProductsForCustomer = await CustomerProduct.find({ customer });
+    const currentProductsForCustomer = await CustomerProduct.find({
+      id: customer._id,
+    });
     console.log(currentProductsForCustomer);
 
     // 2) Check the number of products. If it is 2 then no more can be added.
@@ -108,7 +108,7 @@ const customer = {
       currentProductsForCustomer.length &&
       currentProductsForCustomer.length === 1
     ) {
-      let currentProductType = currentProductsForCustomer[0]['product'];
+      const currentProductType = currentProductsForCustomer[0].product;
       // 4) Compare the product type with the product in req.body. If its the same then the product can't be added
       if (currentProductType === product) {
         return next(new APIError('This kind of product already exists', 401));
@@ -133,7 +133,7 @@ const customer = {
             customer,
           },
         ],
-        { session: session }
+        { session }
       );
 
       // commit the changes if everything was successful
@@ -159,4 +159,4 @@ const customer = {
   }),
 };
 
-module.exports = customer;
+module.exports = customerController;

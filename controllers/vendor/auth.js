@@ -1,15 +1,13 @@
 const mongoose = require('mongoose');
-const { db } = require('../../utils/firebase');
-const APIError = require('../../utils/apiError');
-const catchAsync = require('../../utils/catchAsync');
 const Vendor = require('../../models/vendorModel');
 const Driver = require('../../models/driverModel');
 const Group = require('../../models/groupModel');
 const TotalInventory = require('../../models/totalInventoryModel');
-
+const catchAsync = require('../../utils/catchAsync');
+const APIError = require('../../utils/apiError');
 const { successfulRequest } = require('../../utils/responses');
 
-const auth = {
+const authController = {
   registerVendor: catchAsync(async (req, res, next) => {
     const {
       coolJarStock,
@@ -46,7 +44,7 @@ const auth = {
             state,
           },
         ],
-        { session: session }
+        { session }
       );
 
       // console.log(vendor);
@@ -60,7 +58,7 @@ const auth = {
             customers: [],
           },
         ],
-        { session: session }
+        { session }
       );
 
       const driver = await Driver.create(
@@ -72,7 +70,7 @@ const auth = {
             group: group[0]._id,
           },
         ],
-        { session: session }
+        { session }
       );
 
       const totalInventory = await TotalInventory.create(
@@ -88,7 +86,7 @@ const auth = {
             ],
           },
         ],
-        { session: session }
+        { session }
       );
 
       // commit the changes if everything was successful
@@ -114,4 +112,4 @@ const auth = {
   }),
 };
 
-module.exports = auth;
+module.exports = authController;

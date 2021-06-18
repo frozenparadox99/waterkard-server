@@ -1,14 +1,14 @@
-const auth = require('./auth');
-const customer = require('./customer');
-const group = require('./group');
-const driver = require('./driver');
+const authController = require('./auth');
+const customerController = require('./customer');
+const groupController = require('./group');
+const driverController = require('./driver');
 
 const controller = {
-  registerVendor: auth.registerVendor,
-  registerCustomer: customer.registerCustomer,
-  addCustomerProduct: customer.addCustomerProduct,
-  addGroup: group.addGroup,
-  addDriver: driver.addDriver,
+  registerVendor: authController.registerVendor,
+  registerCustomer: customerController.registerCustomer,
+  addCustomerProduct: customerController.addCustomerProduct,
+  addGroup: groupController.addGroup,
+  addDriver: driverController.addDriver,
 };
 
 module.exports = controller;

@@ -1,12 +1,10 @@
 const mongoose = require('mongoose');
-
-const APIError = require('../../utils/apiError');
-const catchAsync = require('../../utils/catchAsync');
 const Group = require('../../models/groupModel');
-
+const catchAsync = require('../../utils/catchAsync');
+const APIError = require('../../utils/apiError');
 const { successfulRequest } = require('../../utils/responses');
 
-const group = {
+const groupController = {
   addGroup: catchAsync(async (req, res, next) => {
     const { name, description, vendor } = req.body;
 
@@ -24,7 +22,7 @@ const group = {
             customers: [],
           },
         ],
-        { session: session }
+        { session }
       );
 
       // commit the changes if everything was successful
@@ -50,4 +48,4 @@ const group = {
   }),
 };
 
-module.exports = group;
+module.exports = groupController;
