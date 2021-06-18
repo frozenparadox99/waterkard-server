@@ -65,6 +65,31 @@
 3.  **Customer**
 
 - _/vendor/customer_ : Create customer for vendor
+- Request
+
+```json
+{
+  "typeOfCustomer": "Regular",
+  "name": "Customer 1",
+  "mobileNumber": "+919739789874",
+  "address": {
+    "type": "Point",
+    "coordinates": [52.6345, 78.2534]
+  },
+  "city": "Mumbai",
+  "area": "Some Area",
+  "pincode": "123456",
+  "email": "abc@gmail.com",
+  "group": "60cb5fc78863255d0c1bb95d",
+  "vendor": "60cb5fc78863255d0c1bb95b",
+  "product": "18L",
+  "balanceJars": 10,
+  "dispenser": 1,
+  "deposit": 0,
+  "rate": 50
+}
+```
+
 - _/vendor/customer/add-product_ : Add product to customer's usual request
 
 4.  **Group**
