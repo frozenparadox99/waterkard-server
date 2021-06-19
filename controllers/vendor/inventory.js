@@ -166,6 +166,7 @@ const inventoryController = {
 
     return successfulRequest(res, 201, {});
   }),
+  addDailyInventory: (req, res, next) => {},
 };
 
 module.exports = inventoryController;

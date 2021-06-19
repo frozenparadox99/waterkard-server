@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema(
   {
+    vendor: {
+      type: mongoose.Types.ObjectId,
+      ref: 'Vendor',
+      required: true,
+    },
     customer: {
       type: mongoose.Types.ObjectId,
       ref: 'Customer',
