@@ -13,6 +13,7 @@ const controller = {
   addDriver: driverController.addDriver,
   addOrder: orderController.addOrder,
   addTotalInventory: inventoryController.addTotalInventory,
+  removeTotalInventory: inventoryController.removeTotalInventory,
 };
 
 module.exports = controller;

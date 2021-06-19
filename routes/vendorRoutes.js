@@ -39,4 +39,10 @@ router.post(
   vendorController.addTotalInventory
 );
 
+router.post(
+  '/inventory/total-remove-stock',
+  totalInventoryValidators.removeTotalInventory,
+  vendorController.removeTotalInventory
+);
+
 module.exports = router;
