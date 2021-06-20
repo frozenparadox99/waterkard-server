@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const dailyInventorySchema = new mongoose.Schema(
+const dailyJarAndPaymentSchema = new mongoose.Schema(
   {
     vendor: {
       type: mongoose.Types.ObjectId,
@@ -41,6 +41,9 @@ const dailyInventorySchema = new mongoose.Schema(
   }
 );
 
-const DailyInventory = mongoose.model('DailyInventory', dailyInventorySchema);
+const DailyJarAndPayment = mongoose.model(
+  'DailyJarAndPayment',
+  dailyJarAndPaymentSchema
+);
 
-module.exports = DailyInventory;
+module.exports = DailyJarAndPayment;

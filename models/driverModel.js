@@ -57,7 +57,12 @@ driverSchema.post('save', function handleError(error, doc, next) {
   } else {
     const vals = Object.values(error.errors);
     if (vals.length > 0) {
-      return next(new APIError(vals[0].properties.message, 400));
+      return next(
+        new APIError(
+          vals[0]?.properties?.message || 'Something went wrong',
+          400
+        )
+      );
     }
     return next();
   }

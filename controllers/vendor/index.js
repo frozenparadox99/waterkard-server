@@ -11,9 +11,13 @@ const controller = {
   addCustomerProduct: customerController.addCustomerProduct,
   addGroup: groupController.addGroup,
   addDriver: driverController.addDriver,
+  addTransaction: driverController.addTransaction,
   addOrder: orderController.addOrder,
   addTotalInventory: inventoryController.addTotalInventory,
   removeTotalInventory: inventoryController.removeTotalInventory,
+  loadDailyInventory: inventoryController.loadDailyInventory,
+  unloadDailyInventory: inventoryController.unloadDailyInventory,
+  getExpectedUnload: inventoryController.getExpectedUnload,
 };
 
 module.exports = controller;

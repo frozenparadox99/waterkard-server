@@ -7,7 +7,7 @@ const { successfulRequest } = require('../../utils/responses');
 
 const orderController = {
   addOrder: catchAsync(async (req, res, next) => {
-    const { customer, product, preferredDate, jarQty } = req.body;
+    const { customer, product, preferredDate, jarQty, vendor } = req.body;
     const customerProduct = await CustomerProduct.findById(product);
     if (!customerProduct) {
       return next(new APIError('This product does not exist', 400));
@@ -27,6 +27,7 @@ const orderController = {
     await Order.create({
       customer,
       product,
+      vendor,
       preferredDate: parsedDate.data,
       jarQty,
     });

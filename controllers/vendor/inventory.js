@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
-const dateHelpers = require('../../helpers/date.helpers');
 const TotalInventory = require('../../models/totalInventoryModel');
+const DailyInventory = require('../../models/dailyInventoryModel');
+const dateHelpers = require('../../helpers/date.helpers');
 const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
 const { successfulRequest } = require('../../utils/responses');
@@ -114,11 +115,11 @@ const inventoryController = {
       );
 
       if (coolJarsNetAdded < coolJarsNetRemoved + coolJarStock) {
-        return next(new APIError('Can not remove more cool jar stock', 400));
+        return next(new APIError('Cannot remove more cool jar stock', 400));
       }
 
       if (bottleJarsNetAdded < bottleJarsNetRemoved + bottleJarStock) {
-        return next(new APIError('Can not remove more bottle jar stock', 400));
+        return next(new APIError('Cannot remove more bottle jar stock', 400));
       }
 
       const existingStock = currInv.removedStock.filter(
@@ -166,7 +167,245 @@ const inventoryController = {
 
     return successfulRequest(res, 201, {});
   }),
-  addDailyInventory: (req, res, next) => {},
+  loadDailyInventory: catchAsync(async (req, res, next) => {
+    const { vendor, driver, load18, load20, date: stringDate } = req.body;
+    const date = dateHelpers.createDateFromString(stringDate);
+    if (!date.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const existingInventory = await DailyInventory.findOne({
+      vendor,
+      driver,
+      date: date.data,
+    });
+    if (existingInventory) {
+      return next(
+        new APIError(
+          'Daily inventory for this driver and date already exists',
+          400
+        )
+      );
+    }
+    await DailyInventory.create({
+      vendor,
+      driver,
+      load18,
+      load20,
+      date: date.data,
+    });
+    return successfulRequest(res, 201, {});
+  }),
+  unloadDailyInventory: catchAsync(async (req, res, next) => {
+    const {
+      vendor,
+      driver,
+      unloadReturned18,
+      unloadReturned20,
+      unloadEmpty18,
+      unloadEmpty20,
+      date: stringDate,
+    } = req.body;
+    const date = dateHelpers.createDateFromString(stringDate);
+    if (!date.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const dailyInventory = await DailyInventory.findOneAndUpdate(
+      { vendor, driver, date: date.data },
+      {
+        unloadReturned18,
+        unloadReturned20,
+        unloadEmpty18,
+        unloadEmpty20,
+        completed: true,
+      },
+      {
+        new: true,
+      }
+    );
+    if (!dailyInventory) {
+      return next(new APIError('Daily inventory record does not exist', 400));
+    }
+    return successfulRequest(res, 200, {});
+  }),
+  getExpectedUnload: catchAsync(async (req, res, next) => {
+    const { vendor, driver, date: stringDate } = req.query;
+    const date = dateHelpers.createDateFromString(stringDate);
+    if (!date.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const expected = await DailyInventory.aggregate([
+      {
+        $facet: {
+          totalEmpty: [
+            {
+              $match: {
+                vendor: mongoose.Types.ObjectId(vendor),
+                driver: mongoose.Types.ObjectId(driver),
+                date: date.data,
+                completed: false,
+              },
+            },
+            {
+              $lookup: {
+                from: 'dailyjarandpayments',
+                let: {
+                  date: '$date',
+                  vendor: '$vendor',
+                  driver: '$driver',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$driver', '$$driver'] },
+                          { $eq: ['$date', '$$date'] },
+                        ],
+                      },
+                    },
+                  },
+                ],
+                as: 'jarAndPayment',
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarAndPayment',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarAndPayment.transactions',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$jarAndPayment.transactions.product',
+                totalEmptyCollected: {
+                  $sum: '$jarAndPayment.transactions.emptyCollected',
+                },
+              },
+            },
+          ],
+          totalSold: [
+            {
+              $match: {
+                vendor: mongoose.Types.ObjectId(vendor),
+                driver: mongoose.Types.ObjectId(driver),
+                date: date.data,
+              },
+            },
+            {
+              $lookup: {
+                from: 'dailyjarandpayments',
+                let: {
+                  date: '$date',
+                  vendor: '$vendor',
+                  driver: '$driver',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$driver', '$$driver'] },
+                          { $eq: ['$date', '$$date'] },
+                        ],
+                      },
+                    },
+                  },
+                ],
+                as: 'jarAndPayment',
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarAndPayment',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarAndPayment.transactions',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$jarAndPayment.transactions.product',
+                totalSoldJars: {
+                  $sum: '$jarAndPayment.transactions.soldJars',
+                },
+              },
+            },
+          ],
+          load: [
+            {
+              $match: {
+                vendor: mongoose.Types.ObjectId(vendor),
+                driver: mongoose.Types.ObjectId(driver),
+                date: date.data,
+              },
+            },
+            {
+              $project: {
+                load18: 1,
+                load20: 1,
+              },
+            },
+          ],
+        },
+      },
+    ]);
+    if (
+      expected[0].totalSold.length === 0 ||
+      expected[0].totalEmpty.length === 0
+    ) {
+      return next(
+        new APIError(
+          'There are no transactions for this date and inventory',
+          400
+        )
+      );
+    }
+    const sold18 = expected[0].totalSold.filter(el => el._id === '18L');
+    const expectedReturned18 =
+      expected[0].load[0]?.load18 - sold18[0]?.totalSoldJars || undefined;
+    const sold20 = expected[0].totalSold.filter(el => el._id === '20L');
+    const expectedReturned20 =
+      expected[0].load[0]?.load20 - sold20[0]?.totalSoldJars || undefined;
+    const empty18 = expected[0].totalEmpty.filter(el => el._id === '18L');
+    const expectedEmpty18 = empty18[0]?.totalEmptyCollected || undefined;
+    const empty20 = expected[0].totalEmpty.filter(el => el._id === '20L');
+    const expectedEmpty20 = empty20[0]?.totalEmptyCollected || undefined;
+    const obj = {
+      expectedReturned18,
+      expectedReturned20,
+      expectedEmpty18,
+      expectedEmpty20,
+    };
+    for (const prop in obj) {
+      if (!obj[prop]) {
+        delete obj[prop];
+      }
+    }
+    await DailyInventory.updateOne(
+      { vendor, driver, date: date.data },
+      {
+        ...obj,
+      }
+    );
+    return successfulRequest(res, 200, {
+      expectedReturned18,
+      expectedReturned20,
+      expectedEmpty18,
+      expectedEmpty20,
+    });
+  }),
 };
 
 module.exports = inventoryController;

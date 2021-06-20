@@ -20,18 +20,38 @@ const dailyInventorySchema = new mongoose.Schema(
     },
     unloadReturned18: {
       type: Number,
+      default: 0,
     },
     unloadReturned20: {
       type: Number,
+      default: 0,
     },
     unloadEmpty18: {
       type: Number,
+      default: 0,
     },
     unloadEmpty20: {
+      type: Number,
+      default: 0,
+    },
+    expectedReturned18: {
+      type: Number,
+    },
+    expectedReturned20: {
+      type: Number,
+    },
+    expectedEmpty18: {
+      type: Number,
+    },
+    expectedEmpty20: {
       type: Number,
     },
     date: {
       type: Date,
+    },
+    completed: {
+      type: Boolean,
+      default: false,
     },
   },
   {

@@ -31,6 +31,8 @@ router.post('/group', groupValidators.addGroup, vendorController.addGroup);
 
 router.post('/driver', driverValidators.addDriver, vendorController.addDriver);
 
+router.post('/driver/add-transaction', vendorController.addTransaction);
+
 router.post('/order', orderValidators.addOrder, vendorController.addOrder);
 
 router.post(
@@ -43,6 +45,15 @@ router.post(
   '/inventory/total-remove-stock',
   totalInventoryValidators.removeTotalInventory,
   vendorController.removeTotalInventory
+);
+
+router.post('/inventory/daily-load', vendorController.loadDailyInventory);
+
+router.post('/inventory/daily-unload', vendorController.unloadDailyInventory);
+
+router.get(
+  '/inventory/get-expected-unload',
+  vendorController.getExpectedUnload
 );
 
 module.exports = router;
