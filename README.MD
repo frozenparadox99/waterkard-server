@@ -76,8 +76,8 @@
   "data": {
     "expectedReturned20": 6,
     "expectedEmpty20": 5
-    // expectedReturned18: value
-    // expectedEmpty20: value
+    "expectedReturned18": "some number"
+    "expectedEmpty20": "some number"
   }
 }
 ```
