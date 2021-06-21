@@ -343,7 +343,6 @@ const inventoryValidators = {
         }),
       unloadReturned18: Joi.number()
         .min(0)
-        .required()
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
@@ -358,7 +357,6 @@ const inventoryValidators = {
         }),
       unloadReturned20: Joi.number()
         .min(0)
-        .required()
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
@@ -373,7 +371,6 @@ const inventoryValidators = {
         }),
       unloadEmpty18: Joi.number()
         .min(0)
-        .default(0)
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
@@ -385,7 +382,6 @@ const inventoryValidators = {
         }),
       unloadEmpty20: Joi.number()
         .min(0)
-        .default(0)
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
@@ -414,7 +410,26 @@ const inventoryValidators = {
           });
           return errors;
         }),
-    });
+    })
+      .or(
+        'unloadReturned18',
+        'unloadReturned20',
+        'unloadEmpty18',
+        'unloadEmpty20'
+      )
+      .error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            case 'object.missing':
+              er.message =
+                'One of unload returned or unload empty for 18L or 20L is required';
+              break;
+            default:
+              break;
+          }
+        });
+        return errors;
+      });
     const result = schema.validate(req.body, {
       abortEarly: false,
     });

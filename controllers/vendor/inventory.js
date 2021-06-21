@@ -210,7 +210,7 @@ const inventoryController = {
       return next(new APIError('Invalid date', 400));
     }
     const dailyInventory = await DailyInventory.findOneAndUpdate(
-      { vendor, driver, date: date.data },
+      { vendor, driver, date: date.data, completed: false },
       {
         unloadReturned18,
         unloadReturned20,
@@ -223,7 +223,12 @@ const inventoryController = {
       }
     );
     if (!dailyInventory) {
-      return next(new APIError('Daily inventory record does not exist', 400));
+      return next(
+        new APIError(
+          'Either daily inventory record does not exist or it has already been unloaded',
+          400
+        )
+      );
     }
     return successfulRequest(res, 200, {});
   }),
