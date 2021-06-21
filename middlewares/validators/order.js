@@ -2,7 +2,7 @@ const Joi = require('joi');
 const mongoose = require('mongoose');
 const { failedRequestWithErrors } = require('../../utils/responses');
 
-const groupValidators = {
+const orderValidators = {
   addOrder: (req, res, next) => {
     const schema = Joi.object({
       customer: Joi.string()
@@ -126,4 +126,4 @@ const groupValidators = {
   },
 };
 
-module.exports = groupValidators;
+module.exports = orderValidators;

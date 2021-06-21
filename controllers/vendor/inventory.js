@@ -362,25 +362,23 @@ const inventoryController = {
       },
     ]);
     if (
-      expected[0].totalSold.length === 0 ||
-      expected[0].totalEmpty.length === 0
+      expected.length === 0 ||
+      !expected[0].load ||
+      expected[0].load.length === 0
     ) {
-      return next(
-        new APIError(
-          'There are no transactions for this date and inventory',
-          400
-        )
-      );
+      return next(new APIError('This inventory does not exist', 400));
     }
-    const sold18 = expected[0].totalSold.filter(el => el._id === '18L');
+    const sold18 = expected[0]?.totalSold?.filter(el => el._id === '18L');
     const expectedReturned18 =
-      expected[0].load[0]?.load18 - sold18[0]?.totalSoldJars || undefined;
-    const sold20 = expected[0].totalSold.filter(el => el._id === '20L');
+      expected[0].load[0]?.load18 - (sold18[0]?.totalSoldJars || 0) ||
+      undefined;
+    const sold20 = expected[0]?.totalSold?.filter(el => el._id === '20L');
     const expectedReturned20 =
-      expected[0].load[0]?.load20 - sold20[0]?.totalSoldJars || undefined;
-    const empty18 = expected[0].totalEmpty.filter(el => el._id === '18L');
+      expected[0].load[0]?.load20 - (sold20[0]?.totalSoldJars || 0) ||
+      undefined;
+    const empty18 = expected[0]?.totalEmpty?.filter(el => el._id === '18L');
     const expectedEmpty18 = empty18[0]?.totalEmptyCollected || undefined;
-    const empty20 = expected[0].totalEmpty.filter(el => el._id === '20L');
+    const empty20 = expected[0]?.totalEmpty?.filter(el => el._id === '20L');
     const expectedEmpty20 = empty20[0]?.totalEmptyCollected || undefined;
     const obj = {
       expectedReturned18,

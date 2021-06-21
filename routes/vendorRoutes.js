@@ -7,7 +7,7 @@ const customerProductValidators = require('../middlewares/validators/customerPro
 const groupValidators = require('../middlewares/validators/group');
 const driverValidators = require('../middlewares/validators/driver');
 const orderValidators = require('../middlewares/validators/order');
-const totalInventoryValidators = require('../middlewares/validators/totalInventory');
+const inventoryValidators = require('../middlewares/validators/inventory');
 
 router.post(
   '/auth/register',
@@ -31,28 +31,41 @@ router.post('/group', groupValidators.addGroup, vendorController.addGroup);
 
 router.post('/driver', driverValidators.addDriver, vendorController.addDriver);
 
-router.post('/driver/add-transaction', vendorController.addTransaction);
+router.post(
+  '/driver/add-transaction',
+  driverValidators.addTransaction,
+  vendorController.addTransaction
+);
 
 router.post('/order', orderValidators.addOrder, vendorController.addOrder);
 
 router.post(
   '/inventory/total-add-stock',
-  totalInventoryValidators.addTotalInventory,
+  inventoryValidators.addTotalInventory,
   vendorController.addTotalInventory
 );
 
 router.post(
   '/inventory/total-remove-stock',
-  totalInventoryValidators.removeTotalInventory,
+  inventoryValidators.removeTotalInventory,
   vendorController.removeTotalInventory
 );
 
-router.post('/inventory/daily-load', vendorController.loadDailyInventory);
+router.post(
+  '/inventory/daily-load',
+  inventoryValidators.loadDailyInventory,
+  vendorController.loadDailyInventory
+);
 
-router.post('/inventory/daily-unload', vendorController.unloadDailyInventory);
+router.post(
+  '/inventory/daily-unload',
+  inventoryValidators.unloadDailyInventory,
+  vendorController.unloadDailyInventory
+);
 
 router.get(
   '/inventory/get-expected-unload',
+  inventoryValidators.getExpectedUnload,
   vendorController.getExpectedUnload
 );
 

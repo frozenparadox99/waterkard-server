@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const Driver = require('../../models/driverModel');
+const Customer = require('../../models/customerModel');
+const DailyInventory = require('../../models/dailyInventoryModel');
 const DailyJarAndPayment = require('../../models/dailyJarAndPaymentModel');
 const dateHelpers = require('../../helpers/date.helpers');
 const catchAsync = require('../../utils/catchAsync');
@@ -57,19 +59,49 @@ const driverController = {
     const {
       vendor,
       driver,
-      date: stringDate,
       customer,
       soldJars,
       emptyCollected,
       product,
+      date: stringDate,
     } = req.body;
-    // Additional checks ->  Check if daily inventory has been assigned
-    //  Check if customer exists,
-    //  if customer belongs to this vendor,
-    //  if customer belongs to the driver's group
     const date = dateHelpers.createDateFromString(stringDate);
     if (!date.success) {
       return next(new APIError('Invalid date', 400));
+    }
+    const dailyInventory = await DailyInventory.findOne({
+      vendor,
+      driver,
+      date: date.data,
+    });
+    if (!dailyInventory) {
+      return next(
+        new APIError(
+          'Daily inventory/load has not been created yet. Please create it first and then add daily transactions',
+          400
+        )
+      );
+    }
+    const currentDriver = await Driver.findOne(
+      { _id: driver, vendor },
+      { group: 1 }
+    );
+    if (!currentDriver) {
+      return next(
+        new APIError('Driver does not exist. Please add the driver first', 400)
+      );
+    }
+    const currentCustomer = await Customer.findOne({
+      vendor,
+      group: currentDriver.group,
+    });
+    if (!currentCustomer) {
+      return next(
+        new APIError(
+          'Customer does not exist. Please add the customer first',
+          400
+        )
+      );
     }
     const dailyJarAndPayment = await DailyJarAndPayment.findOne({
       vendor,
@@ -78,13 +110,13 @@ const driverController = {
     });
     if (!dailyJarAndPayment) {
       const transactions = [{ customer, soldJars, emptyCollected, product }];
-      const created = await DailyJarAndPayment.create({
+      const jarAndPayment = await DailyJarAndPayment.create({
         vendor,
         driver,
         date: date.data,
         transactions,
       });
-      return successfulRequest(res, 201, { created });
+      return successfulRequest(res, 201, { dailyJarAndPayment: jarAndPayment });
     }
     const exists = dailyJarAndPayment.transactions.filter(
       el => el.customer.toString() === customer && el.product === product
@@ -104,7 +136,7 @@ const driverController = {
       product,
     });
     await dailyJarAndPayment.save();
-    return successfulRequest(res, 200, {});
+    return successfulRequest(res, 200, { dailyJarAndPayment });
   }),
 };
 
