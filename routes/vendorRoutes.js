@@ -8,6 +8,7 @@ const groupValidators = require('../middlewares/validators/group');
 const driverValidators = require('../middlewares/validators/driver');
 const orderValidators = require('../middlewares/validators/order');
 const inventoryValidators = require('../middlewares/validators/inventory');
+const customerPaymentValidators = require('../middlewares/validators/customerPayment');
 
 router.post(
   '/auth/register',
@@ -19,6 +20,12 @@ router.post(
   '/customer',
   customerValidators.registerCustomer,
   vendorController.registerCustomer
+);
+
+router.post(
+  '/customer/payment',
+  customerPaymentValidators.addCustomerPayment,
+  vendorController.addCustomerPayment
 );
 
 router.post(

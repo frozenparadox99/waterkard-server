@@ -4,6 +4,7 @@ const groupController = require('./group');
 const driverController = require('./driver');
 const orderController = require('./order');
 const inventoryController = require('./inventory');
+const paymentController = require('./payment');
 
 const controller = {
   registerVendor: authController.registerVendor,
@@ -18,6 +19,7 @@ const controller = {
   loadDailyInventory: inventoryController.loadDailyInventory,
   unloadDailyInventory: inventoryController.unloadDailyInventory,
   getExpectedUnload: inventoryController.getExpectedUnload,
+  addCustomerPayment: paymentController.addCustomerPayment,
 };
 
 module.exports = controller;
