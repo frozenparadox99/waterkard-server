@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Order = require('../../models/orderModel');
 const CustomerProduct = require('../../models/customerProductModel');
 const dateHelpers = require('../../helpers/date.helpers');
@@ -24,13 +25,57 @@ const orderController = {
     if (!parsedDate.success) {
       return next(new APIError('Invalid preferred date', 400));
     }
-    await Order.create({
-      customer,
-      product,
-      vendor,
-      preferredDate: parsedDate.data,
-      jarQty,
-    });
+
+    const session = await mongoose.startSession();
+
+    session.startTransaction();
+
+    try {
+      await Order.create(
+        [
+          {
+            customer,
+            product,
+            vendor,
+            preferredDate: parsedDate.data,
+            jarQty,
+          },
+        ],
+        { session }
+      );
+
+      const custProd = await CustomerProduct.findOne(
+        { customer, product },
+        'deposit customer product rate balanceJars dispenser',
+        { session }
+      );
+      console.log(custProd);
+
+      const amount = jarQty * custProd.rate;
+
+      custProd.deposit -= amount;
+
+      await custProd.save().session(session);
+
+      // commit the changes if everything was successful
+      await session.commitTransaction();
+    } catch (error) {
+      // if anything fails above just rollback the changes here
+
+      // this will rollback any changes made in the database
+      await session.abortTransaction();
+
+      // logging the error
+      // console.error('-----------------------------------');
+      console.error(error);
+
+      // rethrow the error
+      return next(new APIError('Failed to create customer payment', 401));
+    } finally {
+      // ending the session
+      session.endSession();
+    }
+
     return successfulRequest(res, 201, {});
   }),
 };

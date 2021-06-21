@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const CustomerPayment = require('../../models/customerPaymentModel');
-// const CustomerProduct = require('../../models/customerProductModel');
+const CustomerProduct = require('../../models/customerProductModel');
 const Customer = require('../../models/customerModel');
 const dateHelpers = require('../../helpers/date.helpers');
 const catchAsync = require('../../utils/catchAsync');
@@ -48,15 +48,12 @@ const paymentController = {
       return next(new APIError('Please specify online App for Payment ', 400));
     }
 
-    // 4) Save payment in the Customer Payment collection
-
-    // 5) Based on the product, find and update the deposit amount => should be done in the order part
-
     const session = await mongoose.startSession();
 
     session.startTransaction();
 
     try {
+      // 4) Save payment in the Customer Payment collection
       const customerPayment = await CustomerPayment.create(
         [
           {
@@ -73,16 +70,18 @@ const paymentController = {
         { session }
       );
 
-      //   const custProd = await CustomerProduct.findOne(
-      //     { customer, product },
-      //     'deposit customer product rate balanceJars dispenser',
-      //     { session }
-      //   );
-      //   console.log(custProd);
+      // 5) Based on the product, find and update the deposit amount
 
-      //   custProd.deposit -= amount;
+      const custProd = await CustomerProduct.findOne(
+        { customer, product },
+        'deposit customer product rate balanceJars dispenser',
+        { session }
+      );
+      console.log(custProd);
 
-      //   await custProd.save().session(session);
+      custProd.deposit += amount;
+
+      await custProd.save().session(session);
 
       // commit the changes if everything was successful
       await session.commitTransaction();
