@@ -248,7 +248,7 @@ const inventoryValidators = {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Load for 18L jars is required';
+                er.message = 'Load of 18L jars is required';
                 break;
               case 'number.min':
                 er.message = 'Load of 18L jars cannot be negative';
