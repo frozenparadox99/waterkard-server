@@ -26,26 +26,11 @@ const paymentController = {
     }
 
     // 1) Check if customer belongs to vendor
-    const customerInDb = await Customer.findOne({ vendor });
+    const customerInDb = await Customer.findOne({ _id: customer, vendor });
     console.log(customerInDb);
 
     if (!customerInDb) {
-      return next(
-        new APIError('The vendor does not have the specified customer', 400)
-      );
-    }
-
-    // 2) If mode is cheque, cheque details should not be empty
-    if (mode === 'Cheque' && (!chequeDetails || chequeDetails === '')) {
-      return next(new APIError('Please specify cheque details', 400));
-    }
-
-    // 3) If mode is online, onlineAppForPayment should not be empty
-    if (
-      mode === 'Online' &&
-      (!onlineAppForPayment || onlineAppForPayment === '')
-    ) {
-      return next(new APIError('Please specify online App for Payment ', 400));
+      return next(new APIError('This customer does not exist', 400));
     }
 
     const session = await mongoose.startSession();
@@ -96,7 +81,7 @@ const paymentController = {
       console.error(error);
 
       // rethrow the error
-      return next(new APIError('Failed to create customer payment', 401));
+      return next(new APIError('Failed to create customer payment', 500));
     } finally {
       // ending the session
       session.endSession();

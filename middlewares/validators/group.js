@@ -39,7 +39,7 @@ const groupValidators = {
                 er.message = 'Group name is required';
                 break;
               default:
-                er.message = 'Invalid input for Group name';
+                er.message = 'Invalid input for group name';
             }
           });
           return errors;
@@ -54,7 +54,7 @@ const groupValidators = {
                 er.message = 'Group description is required';
                 break;
               default:
-                er.message = 'Invalid input for Group description';
+                er.message = 'Invalid input for group description';
             }
           });
           return errors;

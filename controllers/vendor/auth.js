@@ -111,7 +111,7 @@ const authController = {
       console.error(error);
 
       // rethrow the error
-      return next(new APIError('Failed to create vendor', 401));
+      return next(new APIError('Failed to create vendor', 500));
     } finally {
       // ending the session
       session.endSession();

@@ -47,7 +47,7 @@ const driverController = {
       console.error(error);
 
       // rethrow the error
-      return next(new APIError('Failed to create vendor', 401));
+      return next(new APIError('Failed to add driver', 500));
     } finally {
       // ending the session
       session.endSession();

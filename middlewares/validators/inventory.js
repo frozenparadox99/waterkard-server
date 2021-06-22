@@ -38,6 +38,9 @@ const inventoryValidators = {
               case 'any.required':
                 er.message = 'Cool jar stock is required';
                 break;
+              case 'number.min':
+                er.message = 'Cool jar stock cannot be negative';
+                break;
               default:
                 er.message = 'Invalid input for cool jar stock';
             }
@@ -52,6 +55,9 @@ const inventoryValidators = {
             switch (er.code) {
               case 'any.required':
                 er.message = 'Bottle jar stock is required';
+                break;
+              case 'number.min':
+                er.message = 'Bottle jar stock cannot be negative';
                 break;
               default:
                 er.message = 'Invalid input for bottle jar stock';
@@ -126,6 +132,9 @@ const inventoryValidators = {
               case 'any.required':
                 er.message = 'Cool jar stock is required';
                 break;
+              case 'number.min':
+                er.message = 'Cool jar stock cannot be negative';
+                break;
               default:
                 er.message = 'Invalid input for cool jar stock';
             }
@@ -140,6 +149,9 @@ const inventoryValidators = {
             switch (er.code) {
               case 'any.required':
                 er.message = 'Bottle jar stock is required';
+                break;
+              case 'number.min':
+                er.message = 'Bottle jar stock cannot be negative';
                 break;
               default:
                 er.message = 'Invalid input for bottle jar stock';
@@ -236,10 +248,13 @@ const inventoryValidators = {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Load for 18L jar is required';
+                er.message = 'Load for 18L jars is required';
+                break;
+              case 'number.min':
+                er.message = 'Load of 18L jars cannot be negative';
                 break;
               default:
-                er.message = 'Invalid input for 18L load';
+                er.message = 'Invalid input for load of 18L jars';
             }
           });
           return errors;
@@ -251,10 +266,13 @@ const inventoryValidators = {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Load for 20L jar is required';
+                er.message = 'Load of 20L jars is required';
+                break;
+              case 'number.min':
+                er.message = 'Load of 20L jars cannot be negative';
                 break;
               default:
-                er.message = 'Invalid input for 20L load';
+                er.message = 'Invalid input for load of 20L jars';
             }
           });
           return errors;
@@ -347,10 +365,13 @@ const inventoryValidators = {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Unload for 18L jar is required';
+                er.message = 'Unload of 18L jars is required';
+                break;
+              case 'number.min':
+                er.message = 'Unload of 18L jars cannot be negative';
                 break;
               default:
-                er.message = 'Invalid input for 18L unload';
+                er.message = 'Invalid input for unload of 18L jars';
             }
           });
           return errors;
@@ -361,10 +382,13 @@ const inventoryValidators = {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Unload for 20L jar is required';
+                er.message = 'Unload of 20L jars is required';
+                break;
+              case 'number.min':
+                er.message = 'Unload of 20L jars cannot be negative';
                 break;
               default:
-                er.message = 'Invalid input for 20L unload';
+                er.message = 'Invalid input for unload of 20L jars';
             }
           });
           return errors;
@@ -375,7 +399,7 @@ const inventoryValidators = {
           errors.forEach(er => {
             switch (er.code) {
               default:
-                er.message = 'Invalid input for 18L unload';
+                er.message = 'Invalid input for empty 18L jars';
             }
           });
           return errors;
@@ -386,7 +410,7 @@ const inventoryValidators = {
           errors.forEach(er => {
             switch (er.code) {
               default:
-                er.message = 'Invalid input for 20L unload';
+                er.message = 'Invalid input for empty 20L jars';
             }
           });
           return errors;
