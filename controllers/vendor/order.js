@@ -45,7 +45,7 @@ const orderController = {
       );
 
       const custProd = await CustomerProduct.findOne(
-        { customer, product },
+        { customer, vendor, product },
         'deposit customer product rate balanceJars dispenser',
         { session }
       );
@@ -70,7 +70,7 @@ const orderController = {
       console.error(error);
 
       // rethrow the error
-      return next(new APIError('Failed to create customer payment', 401));
+      return next(new APIError('Failed to create order', 500));
     } finally {
       // ending the session
       session.endSession();

@@ -67,7 +67,7 @@ const inventoryController = {
       console.error(error);
 
       // rethrow the error
-      return next(new APIError('Failed to create inventory', 401));
+      return next(new APIError('Failed to add total inventory stock', 500));
     } finally {
       // ending the session
       session.endSession();

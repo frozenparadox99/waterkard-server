@@ -10,6 +10,8 @@ const controller = {
   registerVendor: authController.registerVendor,
   registerCustomer: customerController.registerCustomer,
   addCustomerProduct: customerController.addCustomerProduct,
+  addCustomerPayment: paymentController.addCustomerPayment,
+  getCustomers: customerController.getCustomers,
   addGroup: groupController.addGroup,
   addDriver: driverController.addDriver,
   addTransaction: driverController.addTransaction,
@@ -19,7 +21,6 @@ const controller = {
   loadDailyInventory: inventoryController.loadDailyInventory,
   unloadDailyInventory: inventoryController.unloadDailyInventory,
   getExpectedUnload: inventoryController.getExpectedUnload,
-  addCustomerPayment: paymentController.addCustomerPayment,
 };
 
 module.exports = controller;

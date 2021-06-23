@@ -27,10 +27,10 @@ const customerPaymentValidators = {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Mode is required';
+                er.message = 'Mode of payment is required';
                 break;
               default:
-                er.message = 'Invalid input for mode';
+                er.message = 'Invalid input for mode of payment';
             }
           });
           return errors;
@@ -112,18 +112,19 @@ const customerPaymentValidators = {
                 er.message = 'Amount is required';
                 break;
               default:
-                er.message = 'Invalid input for jar quantity';
+                er.message = 'Invalid input for amount';
             }
           });
           return errors;
         }),
       onlineAppForPayment: Joi.string()
         .trim()
+        .when('mode', { is: 'Online', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = "Driver's name is required";
+                er.message = 'Please specify the app used for payment';
                 break;
               default:
                 er.message = 'Invalid input for online app for payment';
@@ -133,14 +134,15 @@ const customerPaymentValidators = {
         }),
       chequeDetails: Joi.string()
         .trim()
+        .when('mode', { is: 'Cheque', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = "Driver's name is required";
+                er.message = 'Please specify cheque details';
                 break;
               default:
-                er.message = 'Invalid input for chequeDetails';
+                er.message = 'Invalid input for cheque details';
             }
           });
           return errors;

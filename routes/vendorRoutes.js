@@ -16,11 +16,10 @@ router.post(
   vendorController.registerVendor
 );
 
-router.post(
-  '/customer',
-  customerValidators.registerCustomer,
-  vendorController.registerCustomer
-);
+router
+  .route('/customer')
+  .post(customerValidators.registerCustomer, vendorController.registerCustomer)
+  .get(vendorController.getCustomers);
 
 router.post(
   '/customer/payment',
