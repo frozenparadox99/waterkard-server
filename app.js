@@ -8,6 +8,7 @@ const morgan = require('morgan');
 const app = express();
 const vendorRoutes = require('./routes/vendorRoutes');
 const errorController = require('./controllers/errorController');
+const APIError = require('./utils/apiError');
 
 app.use(
   express.json({
@@ -33,5 +34,10 @@ if (process.env.NODE_ENV === 'development') {
 
 app.use('/api/v1/vendor', vendorRoutes);
 
+app.all('*', (req, res, next) =>
+  next(new APIError('This route does not exist', 404))
+);
+
 app.use('*', errorController);
+
 module.exports = app;
