@@ -161,7 +161,7 @@ const customerController = {
     return successfulRequest(res, 201, {});
   }),
   getCustomers: catchAsync(async (req, res, next) => {
-    const { vendor, group, product, date } = req.query;
+    const { vendor, group, product, date, type } = req.query;
     const page = parseInt(req.query.page || 1, 10);
     const skip = (page - 1) * 20;
     const limit = 20;
@@ -207,6 +207,12 @@ const customerController = {
       customerMatchStage.$match = {
         ...customerMatchStage.$match,
         group: mongoose.Types.ObjectId(group),
+      };
+    }
+    if (type) {
+      customerMatchStage.$match = {
+        ...customerMatchStage.$match,
+        typeOfCustomer: type,
       };
     }
     const props = [

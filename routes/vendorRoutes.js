@@ -19,7 +19,7 @@ router.post(
 router
   .route('/customer')
   .post(customerValidators.registerCustomer, vendorController.registerCustomer)
-  .get(vendorController.getCustomers);
+  .get(customerValidators.getCustomers, vendorController.getCustomers);
 
 router.post(
   '/customer/payment',
