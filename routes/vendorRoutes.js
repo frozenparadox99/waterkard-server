@@ -33,9 +33,15 @@ router.post(
   vendorController.addCustomerProduct
 );
 
-router.post('/group', groupValidators.addGroup, vendorController.addGroup);
+router
+  .post('/group', groupValidators.addGroup, vendorController.addGroup)
+  .get(vendorController.getGroupDetails);
+router.get('/group/all', vendorController.getGroupsForVendor);
 
-router.post('/driver', driverValidators.addDriver, vendorController.addDriver);
+router
+  .post('/driver', driverValidators.addDriver, vendorController.addDriver)
+  .get(vendorController.getDriverDetails);
+router.get('/driver/all', vendorController.getDriversForVendor);
 
 router.post(
   '/driver/add-transaction',

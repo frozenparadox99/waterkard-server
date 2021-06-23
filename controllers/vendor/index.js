@@ -21,6 +21,10 @@ const controller = {
   loadDailyInventory: inventoryController.loadDailyInventory,
   unloadDailyInventory: inventoryController.unloadDailyInventory,
   getExpectedUnload: inventoryController.getExpectedUnload,
+  getGroupsForVendor: groupController.getGroupsForVendor,
+  getGroupDetails: groupController.getGroupDetails,
+  getDriversForVendor: driverController.getDriversForVendor,
+  getDriverDetails: driverController.getDriverDetails,
 };
 
 module.exports = controller;

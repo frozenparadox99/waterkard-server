@@ -139,7 +139,7 @@ const driverController = {
     return successfulRequest(res, 200, { dailyJarAndPayment });
   }),
   getDriversForVendor: catchAsync(async (req, res, next) => {
-    const { vendor } = req.body;
+    const { vendor } = req.query;
     const drivers = await Driver.find({
       vendor,
     });
@@ -150,7 +150,7 @@ const driverController = {
     return successfulRequest(res, 201, { drivers });
   }),
   getDriverDetails: catchAsync(async (req, res, next) => {
-    const { driverId } = req.body;
+    const { driverId } = req.query;
     const driver = await Driver.findById(driverId).populate({
       populate: 'groups',
     });

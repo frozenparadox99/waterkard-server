@@ -47,7 +47,7 @@ const groupController = {
     return successfulRequest(res, 201, {});
   }),
   getGroupsForVendor: catchAsync(async (req, res, next) => {
-    const { vendor } = req.body;
+    const { vendor } = req.query;
     const groups = await Group.find({
       vendor,
     });
@@ -58,7 +58,7 @@ const groupController = {
     return successfulRequest(res, 201, { groups });
   }),
   getGroupDetails: catchAsync(async (req, res, next) => {
-    const { groupId } = req.body;
+    const { groupId } = req.query;
     const group = await Group.findById(groupId).populate({
       path: 'customers',
       populate: { path: 'customer' },
