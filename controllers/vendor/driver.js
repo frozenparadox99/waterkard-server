@@ -138,6 +138,28 @@ const driverController = {
     await dailyJarAndPayment.save();
     return successfulRequest(res, 200, { dailyJarAndPayment });
   }),
+  getDriversForVendor: catchAsync(async (req, res, next) => {
+    const { vendor } = req.body;
+    const drivers = await Driver.find({
+      vendor,
+    });
+    if (!drivers || drivers.length === 0) {
+      return next(new APIError('No drivers found for the vendor', 400));
+    }
+
+    return successfulRequest(res, 201, { drivers });
+  }),
+  getDriverDetails: catchAsync(async (req, res, next) => {
+    const { driverId } = req.body;
+    const driver = await Driver.findById(driverId).populate({
+      populate: 'groups',
+    });
+    if (!driver) {
+      return next(new APIError('No driver found for the given Id', 400));
+    }
+
+    return successfulRequest(res, 201, { driver });
+  }),
 };
 
 module.exports = driverController;

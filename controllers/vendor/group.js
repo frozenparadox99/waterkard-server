@@ -46,6 +46,29 @@ const groupController = {
 
     return successfulRequest(res, 201, {});
   }),
+  getGroupsForVendor: catchAsync(async (req, res, next) => {
+    const { vendor } = req.body;
+    const groups = await Group.find({
+      vendor,
+    });
+    if (!groups || groups.length === 0) {
+      return next(new APIError('No groups found for the vendor', 400));
+    }
+
+    return successfulRequest(res, 201, { groups });
+  }),
+  getGroupDetails: catchAsync(async (req, res, next) => {
+    const { groupId } = req.body;
+    const group = await Group.findById(groupId).populate({
+      path: 'customers',
+      populate: { path: 'customer' },
+    });
+    if (!group) {
+      return next(new APIError('No group found for the given Id', 400));
+    }
+
+    return successfulRequest(res, 201, { group });
+  }),
 };
 
 module.exports = groupController;
