@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const { customAlphabet } = require('nanoid');
 const APIError = require('../utils/apiError');
 
-// While adding products for customer, ensure that only unique products are added, with maximum size being 2, 18L and 20L
 const driverSchema = new mongoose.Schema(
   {
     name: {
@@ -57,7 +56,12 @@ driverSchema.post('save', function handleError(error, doc, next) {
   } else {
     const vals = Object.values(error.errors);
     if (vals.length > 0) {
-      return next(new APIError(vals[0].properties.message, 400));
+      return next(
+        new APIError(
+          vals[0]?.properties?.message || 'Something went wrong',
+          400
+        )
+      );
     }
     return next();
   }

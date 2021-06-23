@@ -21,5 +21,7 @@ module.exports = {
     'no-unused-vars': 'warn',
     'no-underscore-dangle': 'off',
     'no-param-reassign': 'off',
+    'no-restricted-globals': 'warn',
+    'no-restricted-syntax': 'warn',
   },
 };

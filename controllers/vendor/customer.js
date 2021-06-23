@@ -75,7 +75,7 @@ const customerController = {
       console.error(error);
 
       // rethrow the error
-      return next(new APIError('Failed to create vendor', 401));
+      return next(new APIError('Failed to add customer', 500));
     } finally {
       // ending the session
       session.endSession();
@@ -99,7 +99,7 @@ const customerController = {
       currentProductsForCustomer.length >= 2
     ) {
       return next(
-        new APIError('Only 2 products for a customer can be added', 401)
+        new APIError('Only two products for a customer can be added', 400)
       );
     }
 
@@ -111,7 +111,9 @@ const customerController = {
       const currentProductType = currentProductsForCustomer[0].product;
       // 4) Compare the product type with the product in req.body. If its the same then the product can't be added
       if (currentProductType === product) {
-        return next(new APIError('This kind of product already exists', 401));
+        return next(
+          new APIError('This product already exists for this customer', 400)
+        );
       }
     }
 
@@ -149,7 +151,7 @@ const customerController = {
       console.error(error);
 
       // rethrow the error
-      return next(new APIError('Failed to create vendor', 401));
+      return next(new APIError('Failed to add product', 500));
     } finally {
       // ending the session
       session.endSession();

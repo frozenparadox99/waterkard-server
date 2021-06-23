@@ -73,6 +73,8 @@ const authController = {
         { session }
       );
 
+      const currDate = new Date(new Date().toDateString());
+
       const totalInventory = await TotalInventory.create(
         [
           {
@@ -81,7 +83,14 @@ const authController = {
               {
                 coolJarStock,
                 bottleJarStock,
-                dateAdded: Date.now(),
+                dateAdded: currDate,
+              },
+            ],
+            removedStock: [
+              {
+                coolJarStock: 0,
+                bottleJarStock: 0,
+                dateAdded: currDate,
               },
             ],
           },
@@ -102,7 +111,7 @@ const authController = {
       console.error(error);
 
       // rethrow the error
-      return next(new APIError('Failed to create vendor', 401));
+      return next(new APIError('Failed to create vendor', 500));
     } finally {
       // ending the session
       session.endSession();
