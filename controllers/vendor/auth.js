@@ -28,8 +28,10 @@ const authController = {
 
     session.startTransaction();
 
+    let vendor;
+
     try {
-      const vendor = await Vendor.create(
+      vendor = await Vendor.create(
         [
           {
             defaultGroupName,
@@ -117,7 +119,7 @@ const authController = {
       session.endSession();
     }
 
-    return successfulRequest(res, 201, {});
+    return successfulRequest(res, 201, { vendor: { _id: vendor._id } });
   }),
   getVendor: catchAsync(async (req, res, next) => {
     const { mobileNumber } = req.query;
