@@ -119,7 +119,7 @@ const authController = {
       session.endSession();
     }
 
-    return successfulRequest(res, 201, { vendor: { _id: vendor._id } });
+    return successfulRequest(res, 201, { vendor: { _id: vendor[0]._id } });
   }),
   getVendor: catchAsync(async (req, res, next) => {
     const { mobileNumber } = req.query;
