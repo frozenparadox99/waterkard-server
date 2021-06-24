@@ -142,7 +142,7 @@ const driverController = {
     const { vendor } = req.query;
     const drivers = await Driver.find({
       vendor,
-    });
+    }).populate('group');
     if (!drivers || drivers.length === 0) {
       return next(new APIError('No drivers found for the vendor', 400));
     }
