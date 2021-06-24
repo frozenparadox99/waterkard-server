@@ -10,6 +10,8 @@ const orderValidators = require('../middlewares/validators/order');
 const inventoryValidators = require('../middlewares/validators/inventory');
 const customerPaymentValidators = require('../middlewares/validators/customerPayment');
 
+router.get('/', vendorValidators.getVendor, vendorController.getVendor);
+
 router.post(
   '/auth/register',
   vendorValidators.registerVendor,

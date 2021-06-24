@@ -8,6 +8,7 @@ const paymentController = require('./payment');
 
 const controller = {
   registerVendor: authController.registerVendor,
+  getVendor: authController.getVendor,
   registerCustomer: customerController.registerCustomer,
   addCustomerProduct: customerController.addCustomerProduct,
   addCustomerPayment: paymentController.addCustomerPayment,

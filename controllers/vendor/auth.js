@@ -119,6 +119,21 @@ const authController = {
 
     return successfulRequest(res, 201, {});
   }),
+  getVendor: catchAsync(async (req, res, next) => {
+    const { mobileNumber } = req.query;
+    const vendor = await Vendor.findOne(
+      { mobileNumber },
+      {
+        fullVendorName: 1,
+      }
+    );
+    if (!vendor) {
+      return next(
+        new APIError('This vendor does not exist. Please register first', 400)
+      );
+    }
+    return successfulRequest(res, 200, { vendor });
+  }),
 };
 
 module.exports = authController;

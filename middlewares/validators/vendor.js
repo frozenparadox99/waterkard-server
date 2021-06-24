@@ -197,6 +197,40 @@ const vendorValidators = {
     }
     return next();
   },
+  getVendor: (req, res, next) => {
+    const schema = Joi.object({
+      mobileNumber: Joi.string()
+        .pattern(new RegExp(/^\+91[0-9]{10}$/i))
+        .required()
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Vendor mobile number is required';
+                break;
+              case 'string.pattern.base':
+                er.message =
+                  'Invalid mobile number. Please enter an Indian number';
+                break;
+              default:
+                er.message = 'Invalid input for vendor mobile number';
+            }
+          });
+          return errors;
+        }),
+    });
+    const result = schema.validate(req.query, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
 };
 
 module.exports = vendorValidators;
