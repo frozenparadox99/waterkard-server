@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
 const Group = require('../../models/groupModel');
+const Customer = require('../../models/customerModel');
 const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
 const { successfulRequest } = require('../../utils/responses');
+const Driver = require('../../models/driverModel');
 
 const groupController = {
   addGroup: catchAsync(async (req, res, next) => {
@@ -48,14 +50,34 @@ const groupController = {
   }),
   getGroupsForVendor: catchAsync(async (req, res, next) => {
     const { vendor } = req.query;
-    const groups = await Group.find({
-      vendor,
-    });
+    console.log(vendor);
+    const test = await Group.aggregate([
+      {
+        $lookup: {
+          from: 'customers', // collection name in db
+          localField: '_id',
+          foreignField: 'group',
+          as: 'newcust',
+        },
+      },
+      {
+        $lookup: {
+          from: 'drivers', // collection name in db
+          localField: '_id',
+          foreignField: 'group',
+          as: 'newdriv',
+        },
+      },
+    ]);
+    console.log(test);
+    const groups = test.filter(el => el.vendor.toString() === vendor);
     if (!groups || groups.length === 0) {
       return next(new APIError('No groups found for the vendor', 400));
     }
 
-    return successfulRequest(res, 201, { groups });
+    return successfulRequest(res, 201, {
+      groups,
+    });
   }),
   getGroupDetails: catchAsync(async (req, res, next) => {
     const { groupId } = req.query;

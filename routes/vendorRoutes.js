@@ -35,6 +35,8 @@ router.post(
   vendorController.addCustomerProduct
 );
 
+router.get('/customer/products/all', vendorController.getCustomerProducts);
+
 router
   .post('/group', groupValidators.addGroup, vendorController.addGroup)
   .get(vendorController.getGroupDetails);

@@ -26,12 +26,14 @@ const customerController = {
       rate,
     } = req.body;
 
+    let customer;
+
     const session = await mongoose.startSession();
 
     session.startTransaction();
 
     try {
-      const customer = await Customer.create(
+      customer = await Customer.create(
         [
           {
             typeOfCustomer,
@@ -82,7 +84,7 @@ const customerController = {
       session.endSession();
     }
 
-    return successfulRequest(res, 201, {});
+    return successfulRequest(res, 201, { customer: customer[0] });
   }),
   addCustomerProduct: catchAsync(async (req, res, next) => {
     const { product, balanceJars, dispenser, deposit, rate, customer } =
@@ -159,6 +161,18 @@ const customerController = {
     }
 
     return successfulRequest(res, 201, {});
+  }),
+  getCustomerProducts: catchAsync(async (req, res, next) => {
+    const { customerId } = req.query;
+    const custProds = await CustomerProduct.find({ customer: customerId });
+
+    if (!custProds) {
+      return next(new APIError('No product found for the customer', 400));
+    }
+
+    return successfulRequest(res, 200, {
+      customerProducts: custProds,
+    });
   }),
   getCustomers: catchAsync(async (req, res, next) => {
     const { vendor, group, product, date, type } = req.query;

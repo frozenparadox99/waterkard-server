@@ -26,6 +26,7 @@ const controller = {
   getGroupDetails: groupController.getGroupDetails,
   getDriversForVendor: driverController.getDriversForVendor,
   getDriverDetails: driverController.getDriverDetails,
+  getCustomerProducts: customerController.getCustomerProducts,
 };
 
 module.exports = controller;
