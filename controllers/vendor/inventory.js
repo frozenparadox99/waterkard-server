@@ -37,8 +37,8 @@ const inventoryController = {
           console.log('------------------------------------');
           console.log(el);
           if (el.dateAdded.getTime() === parsedDate.data.getTime()) {
-            el.coolJarStock += coolJarStock;
-            el.bottleJarStock += bottleJarStock;
+            el.coolJarStock += parseInt(coolJarStock, 10);
+            el.bottleJarStock += parseInt(bottleJarStock, 10);
           }
         });
 
@@ -74,6 +74,12 @@ const inventoryController = {
     }
 
     return successfulRequest(res, 201, {});
+  }),
+  getTotalInventory: catchAsync(async (req, res, next) => {
+    const { vendor } = req.query;
+    const totalInventory = await TotalInventory.findOne({ vendor });
+
+    return successfulRequest(res, 201, { totalInventory });
   }),
   removeTotalInventory: catchAsync(async (req, res, next) => {
     const { coolJarStock, bottleJarStock, dateAdded, vendor } = req.body;

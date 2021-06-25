@@ -78,6 +78,8 @@ router.post(
   vendorController.removeTotalInventory
 );
 
+router.get('/inventory/total', vendorController.getTotalInventory);
+
 router.post(
   '/inventory/daily-load',
   inventoryValidators.loadDailyInventory,
