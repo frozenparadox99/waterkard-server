@@ -12,6 +12,12 @@ const customerPaymentValidators = require('../middlewares/validators/customerPay
 
 router.get('/', vendorValidators.getVendor, vendorController.getVendor);
 
+router.get(
+  '/home',
+  vendorValidators.getHomeScreen,
+  vendorController.getHomeScreen
+);
+
 router.post(
   '/auth/register',
   vendorValidators.registerVendor,
@@ -40,7 +46,11 @@ router.get('/customer/products/all', vendorController.getCustomerProducts);
 router
   .post('/group', groupValidators.addGroup, vendorController.addGroup)
   .get(vendorController.getGroupDetails);
-router.get('/group/all', vendorController.getGroupsForVendor);
+router.get(
+  '/group/all',
+  groupValidators.getGroupsForVendor,
+  vendorController.getGroupsForVendor
+);
 
 router
   .post('/driver', driverValidators.addDriver, vendorController.addDriver)

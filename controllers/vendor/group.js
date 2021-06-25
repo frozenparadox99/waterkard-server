@@ -50,8 +50,12 @@ const groupController = {
   }),
   getGroupsForVendor: catchAsync(async (req, res, next) => {
     const { vendor } = req.query;
-    console.log(vendor);
-    const test = await Group.aggregate([
+    const groups = await Group.aggregate([
+      {
+        $match: {
+          vendor: mongoose.Types.ObjectId(vendor),
+        },
+      },
       {
         $lookup: {
           from: 'customers', // collection name in db
@@ -69,8 +73,6 @@ const groupController = {
         },
       },
     ]);
-    console.log(test);
-    const groups = test.filter(el => el.vendor.toString() === vendor);
     if (!groups || groups.length === 0) {
       return next(new APIError('No groups found for the vendor', 400));
     }
