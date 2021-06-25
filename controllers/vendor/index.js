@@ -30,6 +30,7 @@ const controller = {
   getCustomerProducts: customerController.getCustomerProducts,
   getAllOrders: orderController.getAllOrders,
   getTotalInventory: inventoryController.getTotalInventory,
+  getDailyInventory: inventoryController.getDailyInventory,
 };
 
 module.exports = controller;

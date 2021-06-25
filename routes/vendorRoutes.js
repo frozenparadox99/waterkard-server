@@ -86,6 +86,8 @@ router.post(
   vendorController.loadDailyInventory
 );
 
+router.get('/inventory/daily', vendorController.getDailyInventory);
+
 router.post(
   '/inventory/daily-unload',
   inventoryValidators.unloadDailyInventory,
