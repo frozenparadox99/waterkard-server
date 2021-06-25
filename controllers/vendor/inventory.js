@@ -417,27 +417,20 @@ const inventoryController = {
     }
     const sold18 = expected[0]?.totalSold?.filter(el => el._id === '18L');
     const expectedReturned18 =
-      expected[0].load[0]?.load18 - (sold18[0]?.totalSoldJars || 0) ||
-      undefined;
+      expected[0].load[0]?.load18 - (sold18[0]?.totalSoldJars || 0) || 0;
     const sold20 = expected[0]?.totalSold?.filter(el => el._id === '20L');
     const expectedReturned20 =
-      expected[0].load[0]?.load20 - (sold20[0]?.totalSoldJars || 0) ||
-      undefined;
+      expected[0].load[0]?.load20 - (sold20[0]?.totalSoldJars || 0) || 0;
     const empty18 = expected[0]?.totalEmpty?.filter(el => el._id === '18L');
-    const expectedEmpty18 = empty18[0]?.totalEmptyCollected || undefined;
+    const expectedEmpty18 = empty18[0]?.totalEmptyCollected || 0;
     const empty20 = expected[0]?.totalEmpty?.filter(el => el._id === '20L');
-    const expectedEmpty20 = empty20[0]?.totalEmptyCollected || undefined;
+    const expectedEmpty20 = empty20[0]?.totalEmptyCollected || 0;
     const obj = {
       expectedReturned18,
       expectedReturned20,
       expectedEmpty18,
       expectedEmpty20,
     };
-    for (const prop in obj) {
-      if (!obj[prop]) {
-        delete obj[prop];
-      }
-    }
     await DailyInventory.updateOne(
       { vendor, driver, date: date.data },
       {
@@ -445,10 +438,7 @@ const inventoryController = {
       }
     );
     return successfulRequest(res, 200, {
-      expectedReturned18: expectedReturned18 || 0,
-      expectedReturned20: expectedReturned20 || 0,
-      expectedEmpty18: expectedEmpty18 || 0,
-      expectedEmpty20: expectedEmpty20 || 0,
+      ...obj,
     });
   }),
 };
