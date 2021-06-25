@@ -27,6 +27,7 @@ const controller = {
   getDriversForVendor: driverController.getDriversForVendor,
   getDriverDetails: driverController.getDriverDetails,
   getCustomerProducts: customerController.getCustomerProducts,
+  getAllOrders: orderController.getAllOrders,
 };
 
 module.exports = controller;

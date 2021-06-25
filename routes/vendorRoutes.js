@@ -54,6 +54,7 @@ router.post(
 );
 
 router.post('/order', orderValidators.addOrder, vendorController.addOrder);
+router.get('/order/all', vendorController.getAllOrders);
 
 router.post(
   '/inventory/total-add-stock',
