@@ -262,6 +262,7 @@ const customerController = {
               $project: {
                 vendor: 1,
                 name: 1,
+                group: 1,
               },
             },
             {
@@ -291,7 +292,7 @@ const customerController = {
             {
               $unwind: {
                 path: '$jarAndPayments.transactions',
-                preserveNullAndEmptyArrays: false,
+                preserveNullAndEmptyArrays: true,
               },
             },
             {
@@ -307,6 +308,84 @@ const customerController = {
                   $sum: '$jarAndPayments.transactions.soldJars',
                 },
                 name: { $first: '$name' },
+              },
+            },
+          ],
+          groups: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                group: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'groups',
+                let: {
+                  group: '$group',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$_id', '$$group'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      name: 1,
+                    },
+                  },
+                ],
+                as: 'group',
+              },
+            },
+            {
+              $unwind: {
+                path: '$group',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+          ],
+          drivers: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                group: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'drivers',
+                let: {
+                  group: '$group',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$group', '$$group'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      name: 1,
+                    },
+                  },
+                ],
+                as: 'driver',
+              },
+            },
+            {
+              $unwind: {
+                path: '$driver',
+                preserveNullAndEmptyArrays: false,
               },
             },
           ],
@@ -362,16 +441,27 @@ const customerController = {
         },
       },
     ]);
+    console.log(customers[0].drivers);
     const customersFinal = customers[0].deposits.map(el => {
       let details = customers[0].customers.filter(
         ele => ele._id.toString() === el._id.toString()
       )[0];
+      const groupRes =
+        customers[0].groups.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0]?.group?.name || '';
+      const driverRes =
+        customers[0].drivers.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0]?.driver?._id || undefined;
       if (!details) {
         details = {
           totalEmptyCollected: 0,
           totalSold: 0,
         };
       }
+      details.group = groupRes;
+      details.driver = driverRes;
       return {
         ...el,
         ...details,

@@ -156,7 +156,7 @@ const authController = {
               $lookup: {
                 from: 'orders',
                 let: {
-                  vendor: mongoose.Types.ObjectId(vendor),
+                  vendor: '$_id',
                 },
                 pipeline: [
                   {
@@ -204,7 +204,7 @@ const authController = {
               $lookup: {
                 from: 'customers',
                 let: {
-                  vendor: mongoose.Types.ObjectId(vendor),
+                  vendor: '$_id',
                 },
                 pipeline: [
                   {
@@ -252,7 +252,7 @@ const authController = {
               $lookup: {
                 from: 'dailyinventories',
                 let: {
-                  vendor: mongoose.Types.ObjectId(vendor),
+                  vendor: '$_id',
                 },
                 pipeline: [
                   {
@@ -309,6 +309,74 @@ const authController = {
                 totalExpectedEmpty20: {
                   $sum: '$dailyinventories.expectedEmpty20',
                 },
+              },
+            },
+          ],
+          totalJars: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'totalinventories',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$vendor', '$$vendor'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      vendor: 1,
+                      stock: 1,
+                      removedStock: 1,
+                    },
+                  },
+                ],
+                as: 'totalinventories',
+              },
+            },
+            {
+              $unwind: {
+                path: '$totalinventories',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $addFields: {
+                totalCoolJarStock: {
+                  $sum: '$totalinventories.stock.coolJarStock',
+                },
+                totalBottleJarStock: {
+                  $sum: '$totalinventories.stock.bottleJarStock',
+                },
+                totalRemovedCoolJarStock: {
+                  $sum: '$totalinventories.removedStock.coolJarStock',
+                },
+                totalRemovedBottleJarStock: {
+                  $sum: '$totalinventories.removedStock.bottleJarStock',
+                },
+              },
+            },
+            {
+              $project: {
+                totalCoolJarStock: 1,
+                totalBottleJarStock: 1,
+                totalRemovedCoolJarStock: 1,
+                totalRemovedBottleJarStock: 1,
               },
             },
           ],
@@ -418,6 +486,9 @@ const authController = {
     if ((home[0].totalCustomers?.length || 0) <= 0) {
       home[0].totalCustomers = 0;
     }
+    if ((home[0].totalJars?.length || 0) <= 0) {
+      home[0].totalJars = 0;
+    }
     if ((home[0].missingJars?.length || 0) <= 0) {
       home[0].missingJars = 0;
     }
@@ -427,16 +498,23 @@ const authController = {
     if (home[0].totalCustomers !== 0) {
       home[0].totalCustomers = home[0].totalCustomers[0].totalCustomers;
     }
+    if (home[0].totalJars !== 0) {
+      home[0].totalJars =
+        (home[0].totalJars[0]?.totalCoolJarStock || 0) +
+        (home[0].totalJars[0]?.totalBottleJarStock || 0) -
+        ((home[0].totalJars[0]?.totalRemovedCoolJarStock || 0) +
+          (home[0].totalJars[0]?.totalRemovedBottleJarStock || 0));
+    }
     if (home[0].missingJars !== 0) {
       home[0].missingJars =
-        (home[0].missingJars[0].totalExpectedUnload18 || 0) +
-        (home[0].missingJars[0].totalExpectedUnload20 || 0) +
-        (home[0].missingJars[0].totalExpectedEmpty18 || 0) +
-        (home[0].missingJars[0].totalExpectedEmpty20 || 0) -
-        ((home[0].missingJars[0].totalUnload18 || 0) +
-          (home[0].missingJars[0].totalUnload20 || 0) +
-          (home[0].missingJars[0].totalEmpty18 || 0) +
-          (home[0].missingJars[0].totalEmpty20 || 0));
+        (home[0].missingJars[0]?.totalExpectedUnload18 || 0) +
+        (home[0].missingJars[0]?.totalExpectedUnload20 || 0) +
+        (home[0].missingJars[0]?.totalExpectedEmpty18 || 0) +
+        (home[0].missingJars[0]?.totalExpectedEmpty20 || 0) -
+        ((home[0].missingJars[0]?.totalUnload18 || 0) +
+          (home[0].missingJars[0]?.totalUnload20 || 0) +
+          (home[0].missingJars[0]?.totalEmpty18 || 0) +
+          (home[0].missingJars[0]?.totalEmpty20 || 0));
       if (home[0].missingJars < 0) {
         home[0].missingJars = 0;
       }
