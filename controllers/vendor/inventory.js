@@ -244,6 +244,26 @@ const inventoryController = {
     if (!date.success) {
       return next(new APIError('Invalid date', 400));
     }
+    const dailyInv = await DailyInventory.findOne({
+      vendor: mongoose.Types.ObjectId(vendor),
+      driver: mongoose.Types.ObjectId(driver),
+      date: date.data,
+      completed: true,
+    });
+    if (dailyInv) {
+      const {
+        expectedReturned18,
+        expectedReturned20,
+        expectedEmpty18,
+        expectedEmpty20,
+      } = dailyInv;
+      return successfulRequest(res, 200, {
+        expectedReturned18,
+        expectedReturned20,
+        expectedEmpty18,
+        expectedEmpty20,
+      });
+    }
     const expected = await DailyInventory.aggregate([
       {
         $facet: {
