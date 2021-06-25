@@ -441,7 +441,6 @@ const customerController = {
         },
       },
     ]);
-    console.log(customers[0].drivers);
     const customersFinal = customers[0].deposits.map(el => {
       let details = customers[0].customers.filter(
         ele => ele._id.toString() === el._id.toString()
