@@ -429,10 +429,10 @@ const inventoryController = {
       }
     );
     return successfulRequest(res, 200, {
-      expectedReturned18,
-      expectedReturned20,
-      expectedEmpty18,
-      expectedEmpty20,
+      expectedReturned18: expectedReturned18 || 0,
+      expectedReturned20: expectedReturned18 || 0,
+      expectedEmpty18: expectedReturned18 || 0,
+      expectedEmpty20: expectedReturned18 || 0,
     });
   }),
 };
