@@ -201,6 +201,22 @@ const inventoryController = {
     });
     return successfulRequest(res, 201, {});
   }),
+  getDailyInventory: catchAsync(async (req, res, next) => {
+    const { vendor, date } = req.query;
+    const separated = date.split('/');
+    const parsedDate = new Date(separated[2], separated[1] - 1, separated[0]);
+    console.log(parsedDate);
+    // const parsedDate = dateHelpers.createDateFromString(date);
+    // if (!date.success) {
+    //   return next(new APIError('Invalid date', 400));
+    // }
+    const dailyInv = await DailyInventory.find({
+      vendor,
+      date: parsedDate,
+    }).populate('driver');
+
+    return successfulRequest(res, 201, { dailyInv });
+  }),
   unloadDailyInventory: catchAsync(async (req, res, next) => {
     const {
       vendor,
