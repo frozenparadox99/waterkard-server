@@ -251,10 +251,10 @@ const inventoryController = {
         );
       }
       if (
-        isNaN(parseInt(dailyInventory.expectedReturned18)) ||
-        isNaN(parseInt(dailyInventory.expectedReturned20)) ||
-        isNaN(parseInt(dailyInventory.expectedEmpty18)) ||
-        isNaN(parseInt(dailyInventory.expectedEmpty20))
+        Number.isNaN(parseInt(dailyInventory.expectedReturned18, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedReturned20, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedEmpty18, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedEmpty20, 10))
       ) {
         return next(
           new APIError('Please get expected jars for this inventory first', 400)
