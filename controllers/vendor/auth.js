@@ -261,6 +261,14 @@ const authController = {
                         $and: [
                           { $eq: ['$vendor', '$$vendor'] },
                           { $eq: ['$completed', true] },
+                          {
+                            $or: [
+                              { $ne: ['$missingReturned18', 0] },
+                              { $ne: ['$missingReturned20', 0] },
+                              { $ne: ['$missingEmpty18', 0] },
+                              { $ne: ['$missingEmpty20', 0] },
+                            ],
+                          },
                         ],
                       },
                     },
@@ -269,14 +277,10 @@ const authController = {
                     $project: {
                       _id: 1,
                       vendor: 1,
-                      unloadReturned18: 1,
-                      unloadReturned20: 1,
-                      unloadEmpty18: 1,
-                      unloadEmpty20: 1,
-                      expectedReturned18: 1,
-                      expectedReturned20: 1,
-                      expectedEmpty18: 1,
-                      expectedEmpty20: 1,
+                      missingReturned18: 1,
+                      missingReturned20: 1,
+                      missingEmpty18: 1,
+                      missingEmpty20: 1,
                       completed: true,
                     },
                   },
@@ -293,21 +297,17 @@ const authController = {
             {
               $group: {
                 _id: '$_id',
-                totalUnload18: { $sum: '$dailyinventories.unloadReturned18' },
-                totalEmpty18: { $sum: '$dailyinventories.unloadEmpty18' },
-                totalUnload20: { $sum: '$dailyinventories.unloadReturned20' },
-                totalEmpty20: { $sum: '$dailyinventories.unloadEmpty20' },
-                totalExpectedUnload18: {
-                  $sum: '$dailyinventories.expectedReturned18',
+                totalMissingReturned18: {
+                  $sum: '$dailyinventories.missingReturned18',
                 },
-                totalExpectedEmpty18: {
-                  $sum: '$dailyinventories.expectedEmpty18',
+                totalMissingReturned20: {
+                  $sum: '$dailyinventories.missingReturned20',
                 },
-                totalExpectedUnload20: {
-                  $sum: '$dailyinventories.expectedReturned20',
+                totalMissingEmpty18: {
+                  $sum: '$dailyinventories.missingEmpty18',
                 },
-                totalExpectedEmpty20: {
-                  $sum: '$dailyinventories.expectedEmpty20',
+                totalMissingEmpty20: {
+                  $sum: '$dailyinventories.missingEmpty20',
                 },
               },
             },
@@ -507,14 +507,10 @@ const authController = {
     }
     if (home[0].missingJars !== 0) {
       home[0].missingJars =
-        (home[0].missingJars[0]?.totalExpectedUnload18 || 0) +
-        (home[0].missingJars[0]?.totalExpectedUnload20 || 0) +
-        (home[0].missingJars[0]?.totalExpectedEmpty18 || 0) +
-        (home[0].missingJars[0]?.totalExpectedEmpty20 || 0) -
-        ((home[0].missingJars[0]?.totalUnload18 || 0) +
-          (home[0].missingJars[0]?.totalUnload20 || 0) +
-          (home[0].missingJars[0]?.totalEmpty18 || 0) +
-          (home[0].missingJars[0]?.totalEmpty20 || 0));
+        (home[0].missingJars[0]?.totalMissingReturned18 || 0) +
+        (home[0].missingJars[0]?.totalMissingReturned20 || 0) +
+        (home[0].missingJars[0]?.totalMissingEmpty18 || 0) +
+        (home[0].missingJars[0]?.totalMissingEmpty20 || 0);
       if (home[0].missingJars < 0) {
         home[0].missingJars = 0;
       }

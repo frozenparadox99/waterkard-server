@@ -231,25 +231,53 @@ const inventoryController = {
     if (!date.success) {
       return next(new APIError('Invalid date', 400));
     }
-    const dailyInventory = await DailyInventory.findOneAndUpdate(
-      { vendor, driver, date: date.data, completed: false },
-      {
-        unloadReturned18,
-        unloadReturned20,
-        unloadEmpty18,
-        unloadEmpty20,
-        completed: true,
-      },
-      {
-        new: true,
+    const session = await mongoose.startSession();
+
+    session.startTransaction();
+
+    try {
+      const dailyInventory = await DailyInventory.findOne({
+        vendor,
+        driver,
+        date: date.data,
+        completed: false,
+      });
+      if (!dailyInventory) {
+        return next(
+          new APIError(
+            'Either daily inventory record does not exist or it has already been unloaded',
+            400
+          )
+        );
       }
-    );
-    if (!dailyInventory) {
+      if (
+        !dailyInventory.expectedReturned18 ||
+        !dailyInventory.expectedReturned20 ||
+        !dailyInventory.expectedEmpty18 ||
+        !dailyInventory.expectedEmpty20
+      ) {
+        return next(
+          new APIError('Please get expected jars for this inventory first', 400)
+        );
+      }
+      dailyInventory.unloadReturned18 = unloadReturned18;
+      dailyInventory.unloadReturned20 = unloadReturned20;
+      dailyInventory.unloadEmpty18 = unloadEmpty18;
+      dailyInventory.unloadEmpty20 = unloadEmpty20;
+      dailyInventory.missingReturned18 =
+        dailyInventory.expectedReturned18 - unloadReturned18;
+      dailyInventory.missingReturned20 =
+        dailyInventory.expectedReturned20 - unloadReturned20;
+      dailyInventory.missingEmpty18 =
+        dailyInventory.expectedEmpty18 - unloadEmpty18;
+      dailyInventory.missingEmpty20 =
+        dailyInventory.expectedEmpty20 - unloadEmpty20;
+      dailyInventory.completed = true;
+      await dailyInventory.save();
+      await session.commitTransaction();
+    } catch (err) {
       return next(
-        new APIError(
-          'Either daily inventory record does not exist or it has already been unloaded',
-          400
-        )
+        new APIError('Could not unload daily inventory. Please try again', 500)
       );
     }
     return successfulRequest(res, 200, {});

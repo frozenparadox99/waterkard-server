@@ -361,6 +361,7 @@ const inventoryValidators = {
         }),
       unloadReturned18: Joi.number()
         .min(0)
+        .required()
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
@@ -378,6 +379,7 @@ const inventoryValidators = {
         }),
       unloadReturned20: Joi.number()
         .min(0)
+        .required()
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
@@ -395,6 +397,7 @@ const inventoryValidators = {
         }),
       unloadEmpty18: Joi.number()
         .min(0)
+        .required()
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
@@ -406,6 +409,7 @@ const inventoryValidators = {
         }),
       unloadEmpty20: Joi.number()
         .min(0)
+        .required()
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
