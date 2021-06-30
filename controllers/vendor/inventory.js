@@ -460,7 +460,7 @@ const inventoryController = {
       expectedEmpty20,
     };
     await DailyInventory.updateOne(
-      { vendor, driver, date: date.data },
+      { vendor, driver, date: date.data, completed: false },
       {
         ...obj,
       }
