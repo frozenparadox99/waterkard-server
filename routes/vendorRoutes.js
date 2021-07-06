@@ -29,6 +29,8 @@ router
   .post(customerValidators.registerCustomer, vendorController.registerCustomer)
   .get(customerValidators.getCustomers, vendorController.getCustomers);
 
+router.get('/customers-by-date', vendorController.getCustomersByOrderDate);
+
 router.post(
   '/customer/payment',
   customerPaymentValidators.addCustomerPayment,
@@ -87,6 +89,8 @@ router.post(
 );
 
 router.get('/inventory/daily', vendorController.getDailyInventory);
+
+router.get('/inventory/daily-status', vendorController.getDailyInventoryStatus);
 
 router.post(
   '/inventory/daily-unload',

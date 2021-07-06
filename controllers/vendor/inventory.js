@@ -203,16 +203,13 @@ const inventoryController = {
   }),
   getDailyInventory: catchAsync(async (req, res, next) => {
     const { vendor, date } = req.query;
-    const separated = date.split('/');
-    const parsedDate = new Date(separated[2], separated[1] - 1, separated[0]);
-    console.log(parsedDate);
-    // const parsedDate = dateHelpers.createDateFromString(date);
-    // if (!date.success) {
-    //   return next(new APIError('Invalid date', 400));
-    // }
+    const parsedDate = dateHelpers.createDateFromString(date);
+    if (!parsedDate.success) {
+      return next(new APIError('Invalid date', 400));
+    }
     const dailyInv = await DailyInventory.find({
       vendor,
-      date: parsedDate,
+      date: parsedDate.data,
     }).populate('driver');
 
     return successfulRequest(res, 201, { dailyInv });
@@ -468,6 +465,52 @@ const inventoryController = {
     return successfulRequest(res, 200, {
       ...obj,
     });
+  }),
+  getDailyInventoryStatus: catchAsync(async (req, res, next) => {
+    const { vendor, date, driver } = req.query;
+    const parsedDate = dateHelpers.createDateFromString(date);
+    if (!parsedDate.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const dailyInv = await DailyInventory.findOne({
+      vendor,
+      date: parsedDate.data,
+      driver,
+    });
+    if (!dailyInv) {
+      return next(new APIError('Daily inventory does not exist', 400));
+    }
+    const obj = {
+      stage1: dailyInv.loaded18 || 0 + dailyInv.loaded20 || 0,
+      stage2: {
+        present:
+          !Number.isNaN(parseInt(dailyInv.expectedReturned18, 10)) &&
+          !Number.isNaN(parseInt(dailyInv.expectedReturned20, 10)) &&
+          !Number.isNaN(parseInt(dailyInv.expectedEmpty18, 10)) &&
+          !Number.isNaN(parseInt(dailyInv.expectedEmpty20, 10)),
+        empty: dailyInv.expectedEmpty18 + dailyInv.expectedEmpty20,
+        filled: dailyInv.expectedReturned18 + dailyInv.expectedReturned20,
+      },
+      stage3: {
+        present:
+          !Number.isNaN(parseInt(dailyInv.unloadReturned18, 10)) &&
+          !Number.isNaN(parseInt(dailyInv.unloadReturned20, 10)) &&
+          !Number.isNaN(parseInt(dailyInv.unloadEmpty18, 10)) &&
+          !Number.isNaN(parseInt(dailyInv.unloadEmpty20, 10)),
+        empty: dailyInv.unloadEmpty18 + dailyInv.unloadEmpty20,
+        filled: dailyInv.unloadReturned18 + dailyInv.unloadReturned20,
+      },
+    };
+    obj.stage4 = {
+      present: obj.stage2.present && obj.stage3.present,
+      empty:
+        dailyInv.missingEmpty18 + dailyInv.missingEmpty20 ||
+        obj.stage2.empty - obj.stage3.empty,
+      filled:
+        dailyInv.missingReturned18 + dailyInv.missingReturned20 ||
+        obj.stage2.filled - obj.stage3.filled,
+    };
+    return successfulRequest(res, 200, obj);
   }),
 };
 

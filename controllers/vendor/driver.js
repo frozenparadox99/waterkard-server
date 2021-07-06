@@ -56,6 +56,7 @@ const driverController = {
     return successfulRequest(res, 201, {});
   }),
   addTransaction: catchAsync(async (req, res, next) => {
+    // TODO: Check if order has been placed for this customer at the given date, if not, DO NOT ALLOW TRANSACTION
     const {
       vendor,
       driver,
@@ -77,7 +78,7 @@ const driverController = {
     if (!dailyInventory) {
       return next(
         new APIError(
-          'Daily inventory/load has not been created yet. Please create it first and then add daily transactions',
+          'Daily inventory has not been created yet. Please create it first and then add daily transactions',
           400
         )
       );

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Customer = require('../../models/customerModel');
 const CustomerProduct = require('../../models/customerProductModel');
+const Order = require('../../models/orderModel');
 const dateHelpers = require('../../helpers/date.helpers');
 const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
@@ -175,7 +176,7 @@ const customerController = {
     });
   }),
   getCustomers: catchAsync(async (req, res, next) => {
-    const { vendor, group, product, date, type } = req.query;
+    const { vendor, group, product, date, typeOfCustomer } = req.query;
     const page = parseInt(req.query.page || 1, 10);
     const skip = (page - 1) * 20;
     const limit = 20;
@@ -223,10 +224,10 @@ const customerController = {
         group: mongoose.Types.ObjectId(group),
       };
     }
-    if (type) {
+    if (typeOfCustomer) {
       customerMatchStage.$match = {
         ...customerMatchStage.$match,
-        typeOfCustomer: type,
+        typeOfCustomer,
       };
     }
     const props = [
@@ -251,6 +252,298 @@ const customerController = {
         $eq: [product, '$jarAndPayments.transactions.product'],
       });
     }
+    const customers = await Customer.aggregate([
+      {
+        $facet: {
+          customers: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                vendor: 1,
+                name: 1,
+                group: 1,
+              },
+            },
+            {
+              $sort: {
+                name: -1,
+              },
+            },
+            {
+              $skip: skip,
+            },
+            {
+              $limit: limit,
+            },
+            {
+              $lookup: {
+                from: 'dailyjarandpayments',
+                ...jarAndPaymentsLookup,
+                as: 'jarAndPayments',
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarAndPayments',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarAndPayments.transactions',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              ...finalMatch,
+            },
+            {
+              $group: {
+                _id: '$jarAndPayments.transactions.customer',
+                totalEmptyCollected: {
+                  $sum: '$jarAndPayments.transactions.emptyCollected',
+                },
+                totalSold: {
+                  $sum: '$jarAndPayments.transactions.soldJars',
+                },
+                name: { $first: '$name' },
+              },
+            },
+          ],
+          groups: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                group: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'groups',
+                let: {
+                  group: '$group',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$_id', '$$group'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      name: 1,
+                    },
+                  },
+                ],
+                as: 'group',
+              },
+            },
+            {
+              $unwind: {
+                path: '$group',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+          ],
+          drivers: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                group: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'drivers',
+                let: {
+                  group: '$group',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$group', '$$group'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      name: 1,
+                    },
+                  },
+                ],
+                as: 'driver',
+              },
+            },
+            {
+              $unwind: {
+                path: '$driver',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+          ],
+          deposits: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                vendor: 1,
+                name: 1,
+                _id: 1,
+              },
+            },
+            {
+              $sort: {
+                name: -1,
+              },
+            },
+            {
+              $skip: skip,
+            },
+            {
+              $limit: limit,
+            },
+            {
+              $lookup: {
+                from: 'customerproducts',
+                localField: '_id',
+                foreignField: 'customer',
+                as: 'customerProducts',
+              },
+            },
+            {
+              $unwind: {
+                path: '$customerProducts',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                totalDeposit: {
+                  $sum: '$customerProducts.deposit',
+                },
+                totalBalance: {
+                  $sum: '$customerProducts.balanceJars',
+                },
+                name: { $first: '$name' },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+    const customersFinal = customers[0].deposits.map(el => {
+      let details = customers[0].customers.filter(
+        ele => ele._id.toString() === el._id.toString()
+      )[0];
+      const groupRes =
+        customers[0].groups.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0]?.group?.name || '';
+      const driverRes =
+        customers[0].drivers.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0]?.driver?._id || undefined;
+      if (!details) {
+        details = {
+          totalEmptyCollected: 0,
+          totalSold: 0,
+        };
+      }
+      details.group = groupRes;
+      details.driver = driverRes;
+      return {
+        ...el,
+        ...details,
+      };
+    });
+    return successfulRequest(res, 200, {
+      customers: customersFinal,
+      final: customers[0].deposits.length < limit,
+    });
+  }),
+  getCustomersByDate: catchAsync(async (req, res, next) => {
+    let { date } = req.query;
+    const { vendor } = req.query;
+    const parsedDate = date
+      ? dateHelpers.createDateFromString(date)
+      : dateHelpers.createDateFromString(
+          `${new Date().getDate()}/${
+            new Date().getMonth() + 1
+          }/${new Date().getFullYear()}`
+        );
+    // group, type, vendor, product
+    const page = parseInt(req.query.page || 1, 10);
+    const skip = (page - 1) * 20;
+    const limit = 20;
+    if (!parsedDate.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    date = parsedDate.data;
+    let customersToday = new Set();
+    const ordersToday = await Order.aggregate([
+      {
+        $match: {
+          vendor: mongoose.Types.ObjectId(vendor),
+          preferredDate: date,
+        },
+      },
+      {
+        $project: {
+          customer: 1,
+        },
+      },
+    ]);
+    ordersToday.forEach(el => {
+      customersToday.add(el.customer);
+    });
+    customersToday = Array.from(customersToday);
+    const customerMatchStage = {
+      $match: {
+        _id: {
+          $in: customersToday,
+        },
+      },
+    };
+    const jarAndPaymentsLookup = {
+      let: {
+        vendor: '$vendor',
+      },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $and: [
+                {
+                  $eq: ['$vendor', '$$vendor'],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    };
+    const finalMatch = {
+      $match: {
+        $expr: {
+          $and: [
+            {
+              $eq: ['$_id', '$jarAndPayments.transactions.customer'],
+            },
+          ],
+        },
+      },
+    };
     const customers = await Customer.aggregate([
       {
         $facet: {
