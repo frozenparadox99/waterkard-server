@@ -81,6 +81,7 @@ const inventoryController = {
 
     return successfulRequest(res, 201, { totalInventory });
   }),
+  updateTotalInventory: catchAsync(async (req, res, next) => {}),
   removeTotalInventory: catchAsync(async (req, res, next) => {
     const { coolJarStock, bottleJarStock, dateAdded, vendor } = req.body;
     const parsedDate = dateHelpers.createDateFromString(dateAdded);

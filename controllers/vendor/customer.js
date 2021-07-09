@@ -87,6 +87,71 @@ const customerController = {
 
     return successfulRequest(res, 201, { customer: customer[0] });
   }),
+  updateCustomer: catchAsync(async (req, res, next) => {
+    const {
+      id,
+      typeOfCustomer,
+      name,
+      email,
+      mobileNumber,
+      address,
+      city,
+      area,
+      pincode,
+      group,
+    } = req.body;
+    const obj = {
+      typeOfCustomer,
+      name,
+      email,
+      mobileNumber,
+      address,
+      city,
+      area,
+      pincode,
+      group,
+    };
+    for (const p in obj) {
+      if (!obj[p]) {
+        delete obj[p];
+      }
+    }
+    const customer = await Customer.findByIdAndUpdate(
+      id,
+      {
+        ...obj,
+      },
+      {
+        new: true,
+      }
+    );
+    if (!customer) {
+      return next(new APIError('Customer not found', 400));
+    }
+    return successfulRequest(res, 200, { customer });
+  }),
+  updateCustomersGroups: catchAsync(async (req, res, next) => {
+    const { updatedCustomersGroups } = req.body;
+    const promises = [];
+    for (const ele of updatedCustomersGroups) {
+      promises.push(
+        Customer.findByIdAndUpdate(
+          ele.customer,
+          { group: ele.group },
+          {
+            new: true,
+          }
+        )
+      );
+    }
+    const customers = await Promise.all(promises);
+    if (customers.length > 0) {
+      return successfulRequest(res, 200, {
+        message: "Customers' groups updated",
+      });
+    }
+    return next(new APIError("Customers' groups not updated", 500));
+  }),
   addCustomerProduct: catchAsync(async (req, res, next) => {
     const { product, balanceJars, dispenser, deposit, rate, customer } =
       req.body;
@@ -482,7 +547,6 @@ const customerController = {
             new Date().getMonth() + 1
           }/${new Date().getFullYear()}`
         );
-    // group, type, vendor, product
     const page = parseInt(req.query.page || 1, 10);
     const skip = (page - 1) * 20;
     const limit = 20;

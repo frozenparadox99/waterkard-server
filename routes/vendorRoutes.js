@@ -27,9 +27,16 @@ router.post(
 router
   .route('/customer')
   .post(customerValidators.registerCustomer, vendorController.registerCustomer)
+  .patch(vendorController.updateCustomer)
   .get(customerValidators.getCustomers, vendorController.getCustomers);
 
-router.get('/customers-by-date', vendorController.getCustomersByOrderDate);
+router.patch('/customer/groups', vendorController.updateCustomersGroups);
+
+router.get(
+  '/customers-by-date',
+  customerValidators.getCustomersByDate,
+  vendorController.getCustomersByOrderDate
+);
 
 router.post(
   '/customer/payment',
@@ -90,7 +97,11 @@ router.post(
 
 router.get('/inventory/daily', vendorController.getDailyInventory);
 
-router.get('/inventory/daily-status', vendorController.getDailyInventoryStatus);
+router.get(
+  '/inventory/daily-status',
+  inventoryValidators.getDailyInventoryStatus,
+  vendorController.getDailyInventoryStatus
+);
 
 router.post(
   '/inventory/daily-unload',
