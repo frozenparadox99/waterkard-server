@@ -7,6 +7,7 @@ const chalk = require('chalk');
 const morgan = require('morgan');
 const app = express();
 const vendorRoutes = require('./routes/vendorRoutes');
+const driverRoutes = require('./routes/driverRoutes');
 const errorController = require('./controllers/errorController');
 const APIError = require('./utils/apiError');
 
@@ -33,6 +34,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 app.use('/api/v1/vendor', vendorRoutes);
+app.use('/api/v1/driver', driverRoutes);
 
 app.all('*', (req, res, next) =>
   next(new APIError('This route does not exist', 404))

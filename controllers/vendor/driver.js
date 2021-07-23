@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Driver = require('../../models/driverModel');
 const Customer = require('../../models/customerModel');
+const CustomerProduct = require('../../models/customerProductModel');
 const DailyInventory = require('../../models/dailyInventoryModel');
 const DailyJarAndPayment = require('../../models/dailyJarAndPaymentModel');
 const dateHelpers = require('../../helpers/date.helpers');
@@ -56,7 +57,6 @@ const driverController = {
     return successfulRequest(res, 201, {});
   }),
   addTransaction: catchAsync(async (req, res, next) => {
-    // TODO: Check if order has been placed for this customer at the given date, if not, DO NOT ALLOW TRANSACTION
     const {
       vendor,
       driver,
@@ -104,6 +104,15 @@ const driverController = {
         )
       );
     }
+    const customerProduct = await CustomerProduct.findOne({
+      customer,
+      product,
+    });
+    if (!customerProduct) {
+      return next(
+        new APIError('Please add the product for this customer first', 400)
+      );
+    }
     const dailyJarAndPayment = await DailyJarAndPayment.findOne({
       vendor,
       driver,
@@ -137,6 +146,8 @@ const driverController = {
       product,
     });
     await dailyJarAndPayment.save();
+    customerProduct.balanceJars += soldJars - emptyCollected;
+    await customerProduct.save();
     return successfulRequest(res, 200, { dailyJarAndPayment });
   }),
   getDriversForVendor: catchAsync(async (req, res, next) => {
@@ -158,7 +169,6 @@ const driverController = {
     if (!driver) {
       return next(new APIError('No driver found for the given Id', 400));
     }
-
     return successfulRequest(res, 201, { driver });
   }),
 };
