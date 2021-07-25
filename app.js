@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
 const chalk = require('chalk');
 const morgan = require('morgan');
+const path = require('path');
 const app = express();
 const vendorRoutes = require('./routes/vendorRoutes');
 const driverRoutes = require('./routes/driverRoutes');
@@ -35,6 +36,12 @@ if (process.env.NODE_ENV === 'development') {
 
 app.use('/api/v1/vendor', vendorRoutes);
 app.use('/api/v1/driver', driverRoutes);
+
+if (process.env.NODE_ENV === 'production') {
+  app.get('/', (req, res) =>
+    res.sendFile(path.join(__dirname, './index.html'))
+  );
+}
 
 app.all('*', (req, res, next) =>
   next(new APIError('This route does not exist', 404))
