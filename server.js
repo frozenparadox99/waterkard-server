@@ -21,6 +21,31 @@ mongoose
   });
 
 const app = require('./app');
-app.listen(process.env.PORT || 4000, () =>
+const server = app.listen(process.env.PORT || 4000, () =>
   console.log(chalk.cyanBright(`Server up on port ${process.env.PORT || 4000}`))
 );
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.log(reason.name, reason.message);
+  console.table('Server shutting down due to uncaught rejection');
+  server.close(() => {
+    // eslint-disable-next-line
+    process.exit(1);
+  });
+});
+
+process.on('uncaughtException', (err, origin) => {
+  console.log(err.name, err.message);
+  console.table('Server shutting down due to uncaught exception');
+  server.close(() => {
+    // eslint-disable-next-line
+    process.exit(1);
+  });
+});
+
+process.on('SIGTERM', () => {
+  console.log('Shutting down due to SIGTERM');
+  server.close(() => {
+    console.log('Process terminated');
+  });
+});

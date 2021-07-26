@@ -37,8 +37,8 @@ const inventoryController = {
           console.log('------------------------------------');
           console.log(el);
           if (el.dateAdded.getTime() === parsedDate.data.getTime()) {
-            el.coolJarStock += coolJarStock;
-            el.bottleJarStock += bottleJarStock;
+            el.coolJarStock += parseInt(coolJarStock, 10);
+            el.bottleJarStock += parseInt(bottleJarStock, 10);
           }
         });
 
@@ -75,6 +75,13 @@ const inventoryController = {
 
     return successfulRequest(res, 201, {});
   }),
+  getTotalInventory: catchAsync(async (req, res, next) => {
+    const { vendor } = req.query;
+    const totalInventory = await TotalInventory.findOne({ vendor });
+
+    return successfulRequest(res, 201, { totalInventory });
+  }),
+  updateTotalInventory: catchAsync(async (req, res, next) => {}),
   removeTotalInventory: catchAsync(async (req, res, next) => {
     const { coolJarStock, bottleJarStock, dateAdded, vendor } = req.body;
     const parsedDate = dateHelpers.createDateFromString(dateAdded);
@@ -176,7 +183,7 @@ const inventoryController = {
     const existingInventory = await DailyInventory.findOne({
       vendor,
       driver,
-      date: date.data,
+      date: date.data.toISOString(),
     });
     if (existingInventory) {
       return next(
@@ -195,6 +202,19 @@ const inventoryController = {
     });
     return successfulRequest(res, 201, {});
   }),
+  getDailyInventory: catchAsync(async (req, res, next) => {
+    const { vendor, date } = req.query;
+    const parsedDate = dateHelpers.createDateFromString(date);
+    if (!parsedDate.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const dailyInv = await DailyInventory.find({
+      vendor,
+      date: parsedDate.data,
+    }).populate('driver');
+
+    return successfulRequest(res, 201, { dailyInv });
+  }),
   unloadDailyInventory: catchAsync(async (req, res, next) => {
     const {
       vendor,
@@ -209,25 +229,53 @@ const inventoryController = {
     if (!date.success) {
       return next(new APIError('Invalid date', 400));
     }
-    const dailyInventory = await DailyInventory.findOneAndUpdate(
-      { vendor, driver, date: date.data, completed: false },
-      {
-        unloadReturned18,
-        unloadReturned20,
-        unloadEmpty18,
-        unloadEmpty20,
-        completed: true,
-      },
-      {
-        new: true,
+    const session = await mongoose.startSession();
+
+    session.startTransaction();
+
+    try {
+      const dailyInventory = await DailyInventory.findOne({
+        vendor,
+        driver,
+        date: date.data.toISOString(),
+        completed: false,
+      });
+      if (!dailyInventory) {
+        return next(
+          new APIError(
+            'Either daily inventory record does not exist or it has already been unloaded',
+            400
+          )
+        );
       }
-    );
-    if (!dailyInventory) {
+      if (
+        Number.isNaN(parseInt(dailyInventory.expectedReturned18, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedReturned20, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedEmpty18, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedEmpty20, 10))
+      ) {
+        return next(
+          new APIError('Please get expected jars for this inventory first', 400)
+        );
+      }
+      dailyInventory.unloadReturned18 = unloadReturned18;
+      dailyInventory.unloadReturned20 = unloadReturned20;
+      dailyInventory.unloadEmpty18 = unloadEmpty18;
+      dailyInventory.unloadEmpty20 = unloadEmpty20;
+      dailyInventory.missingReturned18 =
+        dailyInventory.expectedReturned18 - unloadReturned18;
+      dailyInventory.missingReturned20 =
+        dailyInventory.expectedReturned20 - unloadReturned20;
+      dailyInventory.missingEmpty18 =
+        dailyInventory.expectedEmpty18 - unloadEmpty18;
+      dailyInventory.missingEmpty20 =
+        dailyInventory.expectedEmpty20 - unloadEmpty20;
+      dailyInventory.completed = true;
+      await dailyInventory.save();
+      await session.commitTransaction();
+    } catch (err) {
       return next(
-        new APIError(
-          'Either daily inventory record does not exist or it has already been unloaded',
-          400
-        )
+        new APIError('Could not unload daily inventory. Please try again', 500)
       );
     }
     return successfulRequest(res, 200, {});
@@ -237,6 +285,26 @@ const inventoryController = {
     const date = dateHelpers.createDateFromString(stringDate);
     if (!date.success) {
       return next(new APIError('Invalid date', 400));
+    }
+    const dailyInv = await DailyInventory.findOne({
+      vendor: mongoose.Types.ObjectId(vendor),
+      driver: mongoose.Types.ObjectId(driver),
+      date: date.data,
+      completed: true,
+    });
+    if (dailyInv) {
+      const {
+        expectedReturned18,
+        expectedReturned20,
+        expectedEmpty18,
+        expectedEmpty20,
+      } = dailyInv;
+      return successfulRequest(res, 200, {
+        expectedReturned18,
+        expectedReturned20,
+        expectedEmpty18,
+        expectedEmpty20,
+      });
     }
     const expected = await DailyInventory.aggregate([
       {
@@ -375,39 +443,71 @@ const inventoryController = {
     }
     const sold18 = expected[0]?.totalSold?.filter(el => el._id === '18L');
     const expectedReturned18 =
-      expected[0].load[0]?.load18 - (sold18[0]?.totalSoldJars || 0) ||
-      undefined;
+      expected[0].load[0]?.load18 - (sold18[0]?.totalSoldJars || 0) || 0;
     const sold20 = expected[0]?.totalSold?.filter(el => el._id === '20L');
     const expectedReturned20 =
-      expected[0].load[0]?.load20 - (sold20[0]?.totalSoldJars || 0) ||
-      undefined;
+      expected[0].load[0]?.load20 - (sold20[0]?.totalSoldJars || 0) || 0;
     const empty18 = expected[0]?.totalEmpty?.filter(el => el._id === '18L');
-    const expectedEmpty18 = empty18[0]?.totalEmptyCollected || undefined;
+    const expectedEmpty18 = empty18[0]?.totalEmptyCollected || 0;
     const empty20 = expected[0]?.totalEmpty?.filter(el => el._id === '20L');
-    const expectedEmpty20 = empty20[0]?.totalEmptyCollected || undefined;
+    const expectedEmpty20 = empty20[0]?.totalEmptyCollected || 0;
     const obj = {
       expectedReturned18,
       expectedReturned20,
       expectedEmpty18,
       expectedEmpty20,
     };
-    for (const prop in obj) {
-      if (!obj[prop]) {
-        delete obj[prop];
-      }
-    }
     await DailyInventory.updateOne(
-      { vendor, driver, date: date.data },
+      { vendor, driver, date: date.data, completed: false },
       {
         ...obj,
       }
     );
     return successfulRequest(res, 200, {
-      expectedReturned18,
-      expectedReturned20,
-      expectedEmpty18,
-      expectedEmpty20,
+      ...obj,
     });
+  }),
+  getDailyInventoryStatus: catchAsync(async (req, res, next) => {
+    const { vendor, date, driver } = req.query;
+    const parsedDate = dateHelpers.createDateFromString(date);
+    if (!parsedDate.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const dailyInv = await DailyInventory.findOne({
+      vendor,
+      date: parsedDate.data.toISOString(),
+      driver,
+    });
+    if (!dailyInv) {
+      return next(new APIError('Daily inventory does not exist', 400));
+    }
+    const obj = {
+      stage1: dailyInv.load18 || 0 + dailyInv.load20 || 0,
+      stage2: {
+        present:
+          !Number.isNaN(parseInt(dailyInv.expectedReturned18, 10)) &&
+          !Number.isNaN(parseInt(dailyInv.expectedReturned20, 10)) &&
+          !Number.isNaN(parseInt(dailyInv.expectedEmpty18, 10)) &&
+          !Number.isNaN(parseInt(dailyInv.expectedEmpty20, 10)),
+        empty: dailyInv.expectedEmpty18 + dailyInv.expectedEmpty20,
+        filled: dailyInv.expectedReturned18 + dailyInv.expectedReturned20,
+      },
+      stage3: {
+        present: dailyInv.completed,
+        empty: dailyInv.unloadEmpty18 + dailyInv.unloadEmpty20,
+        filled: dailyInv.unloadReturned18 + dailyInv.unloadReturned20,
+      },
+    };
+    obj.stage4 = {
+      present: obj.stage2.present && obj.stage3.present,
+      empty:
+        dailyInv.missingEmpty18 + dailyInv.missingEmpty20 ||
+        obj.stage2.empty - obj.stage3.empty,
+      filled:
+        dailyInv.missingReturned18 + dailyInv.missingReturned20 ||
+        obj.stage2.filled - obj.stage3.filled,
+    };
+    return successfulRequest(res, 200, obj);
   }),
 };
 

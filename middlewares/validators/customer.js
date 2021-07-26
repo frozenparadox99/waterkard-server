@@ -283,6 +283,421 @@ const customerValidators = {
     }
     return next();
   },
+  getCustomers: (req, res, next) => {
+    const schema = Joi.object({
+      type: Joi.string()
+        .valid('Regular', 'Event')
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              default:
+                er.message = 'Invalid input for customer type';
+            }
+          });
+          return errors;
+        }),
+      date: Joi.string()
+        .trim()
+        .pattern(new RegExp(/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/i))
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'string.pattern.base':
+                er.message = 'Invalid date';
+                break;
+              default:
+                er.message = 'Invalid input for date';
+            }
+          });
+          return errors;
+        }),
+      vendor: Joi.string()
+        .alphanum()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.invalid':
+                er.message = 'Invalid vendor. Please enter a valid vendor';
+                break;
+              default:
+                er.message = 'Invalid input for vendor';
+            }
+          });
+          return errors;
+        }),
+      product: Joi.string()
+        .valid('18L', '20L')
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              default:
+                er.message = 'Invalid input for product';
+            }
+          });
+          return errors;
+        }),
+      group: Joi.string()
+        .alphanum()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.invalid':
+                er.message = 'Invalid group. Please enter a valid group';
+                break;
+              default:
+                er.message = 'Invalid input for group';
+            }
+          });
+          return errors;
+        }),
+      page: Joi.number()
+        .min(1)
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'number.min':
+                er.message = 'Minimum page is 1';
+                break;
+              default:
+                er.message = 'Invalid input for page';
+            }
+          });
+          return errors;
+        }),
+    });
+    const result = schema.validate(req.query, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
+  getCustomersByDate: (req, res, next) => {
+    const schema = Joi.object({
+      date: Joi.string()
+        .trim()
+        .pattern(new RegExp(/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/i))
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'string.pattern.base':
+                er.message = 'Invalid date';
+                break;
+              default:
+                er.message = 'Invalid input for date';
+            }
+          });
+          return errors;
+        }),
+      vendor: Joi.string()
+        .alphanum()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.invalid':
+                er.message = 'Invalid vendor. Please enter a valid vendor';
+                break;
+              default:
+                er.message = 'Invalid input for vendor';
+            }
+          });
+          return errors;
+        }),
+      page: Joi.number()
+        .min(1)
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'number.min':
+                er.message = 'Minimum page is 1';
+                break;
+              default:
+                er.message = 'Invalid input for page';
+            }
+          });
+          return errors;
+        }),
+    });
+    const result = schema.validate(req.query, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
+  updateCustomer: (req, res, next) => {
+    const schema = Joi.object({
+      id: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Customer is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid customer. Please enter a valid customer';
+                break;
+              default:
+                er.message = 'Invalid input for customer';
+            }
+          });
+          return errors;
+        }),
+      typeOfCustomer: Joi.string()
+        .valid('Regular', 'Event')
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Customer type is required';
+                break;
+              default:
+                er.message = 'Invalid input for customer type';
+            }
+          });
+          return errors;
+        }),
+      name: Joi.string()
+        .trim()
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Customer name is required';
+                break;
+              default:
+                er.message = 'Invalid input for customer name';
+            }
+          });
+          return errors;
+        }),
+      email: Joi.string()
+        .email()
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = "Customer's email is required";
+                break;
+              case 'string.email':
+                er.message = 'Invalid email address';
+                break;
+              default:
+                er.message = "Invalid input for customer's email address";
+            }
+          });
+          return errors;
+        }),
+      mobileNumber: Joi.string()
+        .pattern(new RegExp(/^\+91[0-9]{10}$/i))
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = "Customer's mobile number is required";
+                break;
+              case 'string.pattern.base':
+                er.message =
+                  'Invalid mobile number. Please enter an Indian number';
+                break;
+              default:
+                er.message = "Invalid input for customer's mobile number";
+            }
+          });
+          return errors;
+        }),
+      address: Joi.object({
+        type: Joi.string().required().valid('Point'),
+        coordinates: Joi.array().length(2).items(Joi.number()),
+      }).error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            case 'any.required':
+              er.message = 'Address is required';
+              break;
+            default:
+              er.message = 'Invalid input for address';
+          }
+        });
+        return errors;
+      }),
+      area: Joi.string().error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            case 'any.required':
+              er.message = 'Area is required';
+              break;
+            default:
+              er.message = 'Invalid input for area';
+          }
+        });
+        return errors;
+      }),
+      city: Joi.string().error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            case 'any.required':
+              er.message = 'City is required';
+              break;
+            default:
+              er.message = 'Invalid input for city';
+          }
+        });
+        return errors;
+      }),
+      pincode: Joi.string()
+        .pattern(new RegExp(/^[0-9]{6}$/i))
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Pincode is required';
+                break;
+              case 'string.pattern.base':
+                er.message = 'Invalid pincode. Please enter an Indian pincode';
+                break;
+              default:
+                er.message = 'Invalid input for pincode';
+            }
+          });
+          return errors;
+        }),
+      group: Joi.string()
+        .alphanum()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Group is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid group. Please enter a valid group';
+                break;
+              default:
+                er.message = 'Invalid input for group';
+            }
+          });
+          return errors;
+        }),
+    });
+    const result = schema.validate(req.body, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
+  updateCustomersGroups: (req, res, next) => {
+    const obj = Joi.object().keys({
+      customer: Joi.string()
+        .alphanum()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Group is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid group. Please enter a valid group';
+                break;
+              default:
+                er.message = 'Invalid input for group';
+            }
+          });
+          return errors;
+        }),
+      group: Joi.string()
+        .alphanum()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Group is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid group. Please enter a valid group';
+                break;
+              default:
+                er.message = 'Invalid input for group';
+            }
+          });
+          return errors;
+        }),
+    });
+    const schema = Joi.object({
+      updatedCustomersGroups: Joi.array().items(obj),
+    });
+    const result = schema.validate(req.body, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
 };
 
 module.exports = customerValidators;

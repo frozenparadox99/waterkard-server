@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema(
   {
+    status: {
+      type: String,
+      enum: ['pending', 'completed'],
+      default: 'pending',
+    },
     vendor: {
       type: mongoose.Types.ObjectId,
       ref: 'Vendor',
@@ -10,6 +15,11 @@ const orderSchema = new mongoose.Schema(
     customer: {
       type: mongoose.Types.ObjectId,
       ref: 'Customer',
+      required: true,
+    },
+    driver: {
+      type: mongoose.Types.ObjectId,
+      ref: 'Driver',
       required: true,
     },
     product: {

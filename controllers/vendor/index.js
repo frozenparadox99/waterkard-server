@@ -8,8 +8,15 @@ const paymentController = require('./payment');
 
 const controller = {
   registerVendor: authController.registerVendor,
+  getVendor: authController.getVendor,
+  getHomeScreen: authController.getHomeScreen,
   registerCustomer: customerController.registerCustomer,
+  updateCustomer: customerController.updateCustomer,
+  updateCustomersGroups: customerController.updateCustomersGroups,
   addCustomerProduct: customerController.addCustomerProduct,
+  getCustomers: customerController.getCustomers,
+  getCustomersByOrderDate: customerController.getCustomersByDate,
+  addCustomerPayment: paymentController.addCustomerPayment,
   addGroup: groupController.addGroup,
   addDriver: driverController.addDriver,
   addTransaction: driverController.addTransaction,
@@ -19,7 +26,15 @@ const controller = {
   loadDailyInventory: inventoryController.loadDailyInventory,
   unloadDailyInventory: inventoryController.unloadDailyInventory,
   getExpectedUnload: inventoryController.getExpectedUnload,
-  addCustomerPayment: paymentController.addCustomerPayment,
+  getDailyInventoryStatus: inventoryController.getDailyInventoryStatus,
+  getGroupsForVendor: groupController.getGroupsForVendor,
+  getGroupDetails: groupController.getGroupDetails,
+  getDriversForVendor: driverController.getDriversForVendor,
+  getDriverDetails: driverController.getDriverDetails,
+  getCustomerProducts: customerController.getCustomerProducts,
+  getAllOrders: orderController.getAllOrders,
+  getTotalInventory: inventoryController.getTotalInventory,
+  getDailyInventory: inventoryController.getDailyInventory,
 };
 
 module.exports = controller;

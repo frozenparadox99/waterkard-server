@@ -28,8 +28,10 @@ const authController = {
 
     session.startTransaction();
 
+    let vendor;
+
     try {
-      const vendor = await Vendor.create(
+      vendor = await Vendor.create(
         [
           {
             defaultGroupName,
@@ -117,7 +119,404 @@ const authController = {
       session.endSession();
     }
 
-    return successfulRequest(res, 201, {});
+    return successfulRequest(res, 201, { vendor: { _id: vendor[0]._id } });
+  }),
+  getVendor: catchAsync(async (req, res, next) => {
+    const { mobileNumber } = req.query;
+    const vendor = await Vendor.findOne(
+      { mobileNumber },
+      {
+        fullVendorName: 1,
+      }
+    );
+    if (!vendor) {
+      return next(
+        new APIError('This vendor does not exist. Please register first', 400)
+      );
+    }
+    return successfulRequest(res, 200, { vendor });
+  }),
+  getHomeScreen: catchAsync(async (req, res, next) => {
+    const { vendor } = req.query;
+    const home = await Vendor.aggregate([
+      {
+        $facet: {
+          totalOrders: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'orders',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$vendor', '$$vendor'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      vendor: 1,
+                    },
+                  },
+                ],
+                as: 'orders',
+              },
+            },
+            {
+              $unwind: {
+                path: '$orders',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                totalOrders: { $sum: 1 },
+              },
+            },
+          ],
+          totalCustomers: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'customers',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$vendor', '$$vendor'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      vendor: 1,
+                    },
+                  },
+                ],
+                as: 'customers',
+              },
+            },
+            {
+              $unwind: {
+                path: '$customers',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                totalCustomers: { $sum: 1 },
+              },
+            },
+          ],
+          missingJars: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'dailyinventories',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$completed', true] },
+                          {
+                            $or: [
+                              { $ne: ['$missingReturned18', 0] },
+                              { $ne: ['$missingReturned20', 0] },
+                              { $ne: ['$missingEmpty18', 0] },
+                              { $ne: ['$missingEmpty20', 0] },
+                            ],
+                          },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      vendor: 1,
+                      missingReturned18: 1,
+                      missingReturned20: 1,
+                      missingEmpty18: 1,
+                      missingEmpty20: 1,
+                      completed: true,
+                    },
+                  },
+                ],
+                as: 'dailyinventories',
+              },
+            },
+            {
+              $unwind: {
+                path: '$dailyinventories',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                totalMissingReturned18: {
+                  $sum: '$dailyinventories.missingReturned18',
+                },
+                totalMissingReturned20: {
+                  $sum: '$dailyinventories.missingReturned20',
+                },
+                totalMissingEmpty18: {
+                  $sum: '$dailyinventories.missingEmpty18',
+                },
+                totalMissingEmpty20: {
+                  $sum: '$dailyinventories.missingEmpty20',
+                },
+              },
+            },
+          ],
+          totalJars: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'totalinventories',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$vendor', '$$vendor'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      vendor: 1,
+                      stock: 1,
+                      removedStock: 1,
+                    },
+                  },
+                ],
+                as: 'totalinventories',
+              },
+            },
+            {
+              $unwind: {
+                path: '$totalinventories',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $addFields: {
+                totalCoolJarStock: {
+                  $sum: '$totalinventories.stock.coolJarStock',
+                },
+                totalBottleJarStock: {
+                  $sum: '$totalinventories.stock.bottleJarStock',
+                },
+                totalRemovedCoolJarStock: {
+                  $sum: '$totalinventories.removedStock.coolJarStock',
+                },
+                totalRemovedBottleJarStock: {
+                  $sum: '$totalinventories.removedStock.bottleJarStock',
+                },
+              },
+            },
+            {
+              $project: {
+                totalCoolJarStock: 1,
+                totalBottleJarStock: 1,
+                totalRemovedCoolJarStock: 1,
+                totalRemovedBottleJarStock: 1,
+              },
+            },
+          ],
+          drivers: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'drivers',
+                let: {
+                  vendor: mongoose.Types.ObjectId(vendor),
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$vendor', '$$vendor'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      name: 1,
+                      group: 1,
+                      mobileNumber: 1,
+                    },
+                  },
+                ],
+                as: 'drivers',
+              },
+            },
+            {
+              $unwind: {
+                path: '$drivers',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $lookup: {
+                from: 'groups',
+                let: {
+                  group: '$drivers.group',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$_id', '$$group'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      name: 1,
+                    },
+                  },
+                ],
+                as: 'groups',
+              },
+            },
+            {
+              $unwind: {
+                path: '$groups',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+          ],
+          vendorName: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                fullVendorName: 1,
+              },
+            },
+          ],
+        },
+      },
+    ]);
+    if ((home[0].vendorName?.length || 0) <= 0) {
+      return next(new APIError('This vendor does not exist', 400));
+    }
+    home[0].drivers = {
+      total: home[0].drivers.length,
+      details: home[0].drivers.map(el => ({
+        ...el.drivers,
+        group: el.groups.name,
+      })),
+    };
+    if ((home[0].totalOrders?.length || 0) <= 0) {
+      home[0].totalOrders = 0;
+    }
+    if ((home[0].totalCustomers?.length || 0) <= 0) {
+      home[0].totalCustomers = 0;
+    }
+    if ((home[0].totalJars?.length || 0) <= 0) {
+      home[0].totalJars = 0;
+    }
+    if ((home[0].missingJars?.length || 0) <= 0) {
+      home[0].missingJars = 0;
+    }
+    if (home[0].totalOrders !== 0) {
+      home[0].totalOrders = home[0].totalOrders[0].totalOrders;
+    }
+    if (home[0].totalCustomers !== 0) {
+      home[0].totalCustomers = home[0].totalCustomers[0].totalCustomers;
+    }
+    if (home[0].totalJars !== 0) {
+      home[0].totalJars =
+        (home[0].totalJars[0]?.totalCoolJarStock || 0) +
+        (home[0].totalJars[0]?.totalBottleJarStock || 0) -
+        ((home[0].totalJars[0]?.totalRemovedCoolJarStock || 0) +
+          (home[0].totalJars[0]?.totalRemovedBottleJarStock || 0));
+    }
+    if (home[0].missingJars !== 0) {
+      home[0].missingJars =
+        (home[0].missingJars[0]?.totalMissingReturned18 || 0) +
+        (home[0].missingJars[0]?.totalMissingReturned20 || 0) +
+        (home[0].missingJars[0]?.totalMissingEmpty18 || 0) +
+        (home[0].missingJars[0]?.totalMissingEmpty20 || 0);
+      if (home[0].missingJars < 0) {
+        home[0].missingJars = 0;
+      }
+    }
+    home[0].vendorName = home[0].vendorName[0].fullVendorName;
+    return successfulRequest(res, 200, { home: home[0] });
   }),
 };
 

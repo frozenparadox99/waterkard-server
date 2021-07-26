@@ -66,6 +66,7 @@ driverSchema.post('save', function handleError(error, doc, next) {
     return next();
   }
 });
+
 const Driver = mongoose.model('Driver', driverSchema);
 
 module.exports = Driver;

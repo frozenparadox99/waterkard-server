@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Driver = require('../../models/driverModel');
 const Customer = require('../../models/customerModel');
+const CustomerProduct = require('../../models/customerProductModel');
 const DailyInventory = require('../../models/dailyInventoryModel');
 const DailyJarAndPayment = require('../../models/dailyJarAndPaymentModel');
 const dateHelpers = require('../../helpers/date.helpers');
@@ -72,12 +73,12 @@ const driverController = {
     const dailyInventory = await DailyInventory.findOne({
       vendor,
       driver,
-      date: date.data,
+      date: date.data.toISOString(),
     });
     if (!dailyInventory) {
       return next(
         new APIError(
-          'Daily inventory/load has not been created yet. Please create it first and then add daily transactions',
+          'Daily inventory has not been created yet. Please create it first and then add daily transactions',
           400
         )
       );
@@ -101,6 +102,15 @@ const driverController = {
           'Customer does not exist. Please add the customer first',
           400
         )
+      );
+    }
+    const customerProduct = await CustomerProduct.findOne({
+      customer,
+      product,
+    });
+    if (!customerProduct) {
+      return next(
+        new APIError('Please add the product for this customer first', 400)
       );
     }
     const dailyJarAndPayment = await DailyJarAndPayment.findOne({
@@ -136,7 +146,30 @@ const driverController = {
       product,
     });
     await dailyJarAndPayment.save();
+    customerProduct.balanceJars += soldJars - emptyCollected;
+    await customerProduct.save();
     return successfulRequest(res, 200, { dailyJarAndPayment });
+  }),
+  getDriversForVendor: catchAsync(async (req, res, next) => {
+    const { vendor } = req.query;
+    const drivers = await Driver.find({
+      vendor,
+    }).populate('group');
+    if (!drivers || drivers.length === 0) {
+      return next(new APIError('No drivers found for the vendor', 400));
+    }
+
+    return successfulRequest(res, 201, { drivers });
+  }),
+  getDriverDetails: catchAsync(async (req, res, next) => {
+    const { driverId } = req.query;
+    const driver = await Driver.findById(driverId).populate({
+      populate: 'groups',
+    });
+    if (!driver) {
+      return next(new APIError('No driver found for the given Id', 400));
+    }
+    return successfulRequest(res, 201, { driver });
   }),
 };
 

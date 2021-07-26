@@ -6,6 +6,7 @@ const totalInventorySchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: 'Vendor',
       required: true,
+      unique: true,
     },
     stock: [
       {

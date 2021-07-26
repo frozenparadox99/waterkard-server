@@ -45,17 +45,17 @@ const orderController = {
       );
 
       const custProd = await CustomerProduct.findOne(
-        { customer, vendor, product },
+        { _id: product },
         'deposit customer product rate balanceJars dispenser',
         { session }
       );
       console.log(custProd);
 
-      const amount = jarQty * custProd.rate;
+      const amount = parseInt(jarQty, 10) * custProd.rate;
 
       custProd.deposit -= amount;
 
-      await custProd.save().session(session);
+      await custProd.save();
 
       // commit the changes if everything was successful
       await session.commitTransaction();
@@ -77,6 +77,19 @@ const orderController = {
     }
 
     return successfulRequest(res, 201, {});
+  }),
+  getAllOrders: catchAsync(async (req, res, next) => {
+    const { vendor } = req.query;
+    const orders = await Order.find({
+      vendor,
+    })
+      .populate('customer')
+      .populate('product');
+    if (!orders) {
+      return next(new APIError('No drivers found for the vendor', 400));
+    }
+
+    return successfulRequest(res, 201, { orders });
   }),
 };
 
