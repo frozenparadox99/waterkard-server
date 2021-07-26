@@ -183,7 +183,7 @@ const inventoryController = {
     const existingInventory = await DailyInventory.findOne({
       vendor,
       driver,
-      date: date.data.toISOString(),
+      date: date.data,
     });
     if (existingInventory) {
       return next(
@@ -237,7 +237,7 @@ const inventoryController = {
       const dailyInventory = await DailyInventory.findOne({
         vendor,
         driver,
-        date: date.data.toISOString(),
+        date: date.data,
         completed: false,
       });
       if (!dailyInventory) {
@@ -475,14 +475,14 @@ const inventoryController = {
     }
     const dailyInv = await DailyInventory.findOne({
       vendor,
-      date: parsedDate.data.toISOString(),
+      date: parsedDate.data,
       driver,
     });
     if (!dailyInv) {
       return next(new APIError('Daily inventory does not exist', 400));
     }
     const obj = {
-      stage1: dailyInv.load18 || 0 + dailyInv.load20 || 0,
+      stage1: (dailyInv.load18 || 0) + (dailyInv.load20 || 0),
       stage2: {
         present:
           !Number.isNaN(parseInt(dailyInv.expectedReturned18, 10)) &&
