@@ -66,7 +66,7 @@ const paymentController = {
 
       custProd.deposit += amount;
 
-      await custProd.save().session(session);
+      await custProd.save();
 
       // commit the changes if everything was successful
       await session.commitTransaction();
