@@ -64,7 +64,7 @@ const paymentController = {
       );
       console.log(custProd);
 
-      custProd.deposit += amount;
+      custProd.deposit += parseInt(amount, 10);
 
       await custProd.save();
 
