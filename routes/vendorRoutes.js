@@ -50,7 +50,17 @@ router.post(
   vendorController.addCustomerProduct
 );
 
-router.get('/customer/products/all', vendorController.getCustomerProducts);
+router.get(
+  '/customer/products/all',
+  customerValidators.getCustomerProducts,
+  vendorController.getCustomerProducts
+);
+
+router.get(
+  '/customer/deposits',
+  customerValidators.getCustomerDeposits,
+  vendorController.getCustomerDeposits
+);
 
 router
   .post('/group', groupValidators.addGroup, vendorController.addGroup)
