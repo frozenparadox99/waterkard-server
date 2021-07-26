@@ -9,6 +9,7 @@ const driverValidators = require('../middlewares/validators/driver');
 const orderValidators = require('../middlewares/validators/order');
 const inventoryValidators = require('../middlewares/validators/inventory');
 const customerPaymentValidators = require('../middlewares/validators/customerPayment');
+const driverPaymentValidators = require('../middlewares/validators/driverPayment');
 
 router.get('/', vendorValidators.getVendor, vendorController.getVendor);
 
@@ -80,6 +81,18 @@ router.post(
   '/driver/add-transaction',
   driverValidators.addTransaction,
   vendorController.addTransaction
+);
+
+router.post(
+  '/driver/payment',
+  driverPaymentValidators.addDriverPayment,
+  vendorController.addDriverPayment
+);
+
+router.get(
+  '/driver/payments',
+  driverPaymentValidators.getDriverPayments,
+  vendorController.getDriverPayments
 );
 
 router.post('/order', orderValidators.addOrder, vendorController.addOrder);

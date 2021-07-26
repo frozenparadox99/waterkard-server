@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
+const DriverPayment = require('../../models/driverPaymentModel');
 const CustomerPayment = require('../../models/customerPaymentModel');
 const CustomerProduct = require('../../models/customerProductModel');
 const Customer = require('../../models/customerModel');
+const Driver = require('../../models/driverModel');
 const dateHelpers = require('../../helpers/date.helpers');
 const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
@@ -45,7 +47,7 @@ const paymentController = {
             customer,
             mode,
             vendor,
-            date,
+            date: parsedDate.data,
             amount,
             chequeDetails,
             onlineAppForPayment,
@@ -88,6 +90,265 @@ const paymentController = {
     }
 
     return successfulRequest(res, 201, {});
+  }),
+  addDriverPayment: catchAsync(async (req, res, next) => {
+    const {
+      vendor,
+      driver,
+      customer,
+      from,
+      to,
+      product,
+      mode,
+      amount,
+      chequeDetails,
+      onlineAppForPayment,
+      date: stringDate,
+    } = req.body;
+    const date = dateHelpers.createDateFromString(stringDate);
+    if (!date.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const driverPayment = await DriverPayment.create({
+      vendor,
+      driver,
+      customer,
+      from,
+      to,
+      product,
+      mode,
+      amount,
+      chequeDetails,
+      onlineAppForPayment,
+      date: date.data,
+    });
+    return successfulRequest(res, 200, { driverPayment });
+  }),
+  getDriverPayments: catchAsync(async (req, res, next) => {
+    const { vendor } = req.query;
+    const driverPayments = await Driver.aggregate([
+      {
+        $facet: {
+          received: [
+            {
+              $match: {
+                vendor: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                vendor: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'driverpayments',
+                let: {
+                  vendor: '$vendor',
+                  driver: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          {
+                            $eq: ['$vendor', '$$vendor'],
+                          },
+                          {
+                            $eq: ['$driver', '$$driver'],
+                          },
+                          {
+                            $eq: ['$from', 'Customer'],
+                          },
+                          {
+                            $eq: ['$to', 'Driver'],
+                          },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      amount: 1,
+                    },
+                  },
+                ],
+                as: 'driverpayments',
+              },
+            },
+            {
+              $unwind: {
+                path: '$driverpayments',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                received: { $sum: '$driverpayments.amount' },
+                name: { $first: '$name' },
+              },
+            },
+          ],
+          given: [
+            {
+              $match: {
+                vendor: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                vendor: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'driverpayments',
+                let: {
+                  vendor: '$vendor',
+                  driver: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          {
+                            $eq: ['$vendor', '$$vendor'],
+                          },
+                          {
+                            $eq: ['$driver', '$$driver'],
+                          },
+                          {
+                            $eq: ['$from', 'Driver'],
+                          },
+                          {
+                            $eq: ['$to', 'Vendor'],
+                          },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      amount: 1,
+                    },
+                  },
+                ],
+                as: 'driverpayments',
+              },
+            },
+            {
+              $unwind: {
+                path: '$driverpayments',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                given: { $sum: '$driverpayments.amount' },
+                name: { $first: '$name' },
+              },
+            },
+          ],
+          today: [
+            {
+              $match: {
+                vendor: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                vendor: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'driverpayments',
+                let: {
+                  vendor: '$vendor',
+                  driver: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          {
+                            $eq: ['$vendor', '$$vendor'],
+                          },
+                          {
+                            $eq: ['$driver', '$$driver'],
+                          },
+                          {
+                            $eq: ['$from', 'Customer'],
+                          },
+                          {
+                            $eq: ['$to', 'Driver'],
+                          },
+                          {
+                            $eq: [
+                              '$date',
+                              new Date(
+                                new Date().getFullYear(),
+                                new Date().getMonth(),
+                                new Date().getDate()
+                              ),
+                            ],
+                          },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      amount: 1,
+                    },
+                  },
+                ],
+                as: 'driverpayments',
+              },
+            },
+            {
+              $unwind: {
+                path: '$driverpayments',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                received: { $sum: '$driverpayments.amount' },
+                name: { $first: '$name' },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+    const payments = driverPayments[0].received.map(el => {
+      const givenRes = driverPayments[0].given.filter(
+        ele => ele._id.toString() === el._id.toString()
+      )[0];
+      const todayRes = driverPayments[0].today.filter(
+        ele => ele._id.toString() === el._id.toString()
+      )[0];
+      return {
+        _id: el._id,
+        name: el.name,
+        received: el.received,
+        given: givenRes.given,
+        today: todayRes.received,
+      };
+    });
+    return successfulRequest(res, 200, {
+      payments,
+    });
   }),
 };
 
