@@ -24,11 +24,11 @@ const driverPaymentSchema = new mongoose.Schema(
     to: {
       type: String,
       enum: ['Vendor', 'Driver'],
+      required: true,
     },
     product: {
       type: String,
       enum: ['18L', '20L'],
-      required: true,
     },
     mode: {
       type: String,

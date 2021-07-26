@@ -6,8 +6,8 @@ const driverPaymentValidators = {
   addDriverPayment: (req, res, next) => {
     const schema = Joi.object({
       product: Joi.string()
-        // .when('from', { is: 'Customer', then: Joi.required() })
         .valid('18L', '20L')
+        .when('from', { is: 'Customer', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
@@ -53,6 +53,7 @@ const driverPaymentValidators = {
       to: Joi.string()
         .required()
         .valid('Vendor', 'Driver')
+        .when('from', { is: 'Driver', then: Joi.invalid('Driver') })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
