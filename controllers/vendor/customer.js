@@ -528,6 +528,30 @@ const customerController = {
               $limit: limit,
             },
           ],
+          addresses: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                vendor: 1,
+                name: 1,
+                group: 1,
+                address: 1,
+              },
+            },
+            {
+              $sort: {
+                name: -1,
+              },
+            },
+            {
+              $skip: skip,
+            },
+            {
+              $limit: limit,
+            },
+          ],
         },
       },
     ]);
@@ -547,6 +571,10 @@ const customerController = {
         customers[0].mobileNumbers.filter(
           ele => ele._id.toString() === el._id.toString()
         )[0]?.mobileNumber || undefined;
+      const addressRes =
+        customers[0].addresses.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0]?.address || undefined;
       if (!details) {
         details = {
           totalEmptyCollected: 0,
@@ -556,6 +584,7 @@ const customerController = {
       details.group = groupRes;
       details.driver = driverRes;
       details.mobileNumber = mobileRes;
+      details.address = addressRes;
       return {
         ...el,
         ...details,
