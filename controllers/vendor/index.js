@@ -21,6 +21,7 @@ const controller = {
   addCustomerPayment: paymentController.addCustomerPayment,
   addDriverPayment: paymentController.addDriverPayment,
   getDriverPayments: paymentController.getDriverPayments,
+  getDriverPaymentsByDriver: paymentController.getDriverPaymentsByDriver,
   addGroup: groupController.addGroup,
   addDriver: driverController.addDriver,
   addTransaction: driverController.addTransaction,
