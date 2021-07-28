@@ -155,7 +155,7 @@ const paymentController = {
     } finally {
       session.endSession();
     }
-    return successfulRequest(res, 200, { driverPayment });
+    return successfulRequest(res, 201, { driverPayment });
   }),
   getDriverPayments: catchAsync(async (req, res, next) => {
     const { vendor } = req.query;
