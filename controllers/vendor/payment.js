@@ -147,8 +147,8 @@ const paymentController = {
         }
         customerProduct.deposit += +amount;
         await customerProduct.save();
-        await session.commitTransaction();
       }
+      await session.commitTransaction();
     } catch (err) {
       await session.abortTransaction();
       return next(new APIError(err.message, 400));
