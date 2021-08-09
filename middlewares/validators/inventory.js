@@ -634,6 +634,176 @@ const inventoryValidators = {
     }
     return next();
   },
+  getDailyTransactionsByCustomer: (req, res, next) => {
+    const schema = Joi.object({
+      vendor: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Vendor is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid vendor. Please enter a valid vendor';
+                break;
+              default:
+                er.message = 'Invalid input for vendor';
+            }
+          });
+          return errors;
+        }),
+      customer: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Customer is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid customer. Please enter a valid customer';
+                break;
+              default:
+                er.message = 'Invalid input for customer';
+            }
+          });
+          return errors;
+        }),
+      page: Joi.number()
+        .min(1)
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'number.min':
+                er.message = 'Minimum page is 1';
+                break;
+              default:
+                er.message = 'Invalid input for page';
+            }
+          });
+          return errors;
+        }),
+    });
+    const result = schema.validate(req.query, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
+  updateDailyTransaction: (req, res, next) => {
+    const schema = Joi.object({
+      jarAndPayment: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Jar and payment is required';
+                break;
+              case 'any.invalid':
+                er.message =
+                  'Invalid jar and payment. Please enter a valid jar and payment';
+                break;
+              default:
+                er.message = 'Invalid input for jar and payment';
+            }
+          });
+          return errors;
+        }),
+      transaction: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Transaction is required';
+                break;
+              case 'any.invalid':
+                er.message =
+                  'Invalid transaction. Please enter a valid transaction';
+                break;
+              default:
+                er.message = 'Invalid input for transaction';
+            }
+          });
+          return errors;
+        }),
+      soldJars: Joi.number()
+        .min(0)
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'number.min':
+                er.message = 'Minimum sold jars is 0';
+                break;
+              default:
+                er.message = 'Invalid input for sold jars';
+            }
+          });
+          return errors;
+        }),
+      emptyCollected: Joi.number()
+        .min(0)
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'number.min':
+                er.message = 'Minimum empty collected is 0';
+                break;
+              default:
+                er.message = 'Invalid input for empty collected';
+            }
+          });
+          return errors;
+        }),
+    }).or('soldJars', 'emptyCollected');
+    const result = schema.validate(req.body, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
 };
 
 module.exports = inventoryValidators;

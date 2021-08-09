@@ -138,4 +138,15 @@ router.get(
   vendorController.getExpectedUnload
 );
 
+router
+  .route('/transactions')
+  .get(
+    inventoryValidators.getDailyTransactionsByCustomer,
+    vendorController.getDailyTransactionsByCustomer
+  )
+  .patch(
+    inventoryValidators.updateDailyTransaction,
+    vendorController.updateDailyTransaction
+  );
+
 module.exports = router;
