@@ -39,9 +39,11 @@ const controller = {
   getAllOrders: orderController.getAllOrders,
   getTotalInventory: inventoryController.getTotalInventory,
   getDailyInventory: inventoryController.getDailyInventory,
+  getDailyJarAndPayment: inventoryController.getDailyJarAndPayment,
   getDailyTransactionsByCustomer:
     inventoryController.getDailyTransactionsByCustomer,
   updateDailyTransaction: inventoryController.updateDailyTransaction,
+  updateUnload: inventoryController.updateUnload,
 };
 
 module.exports = controller;

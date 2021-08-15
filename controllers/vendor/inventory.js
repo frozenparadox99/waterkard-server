@@ -281,6 +281,102 @@ const inventoryController = {
     }
     return successfulRequest(res, 200, {});
   }),
+  updateUnload: catchAsync(async (req, res, next) => {
+    const {
+      vendor,
+      driver,
+      unloadReturned18,
+      unloadReturned20,
+      unloadEmpty18,
+      unloadEmpty20,
+      date: stringDate,
+    } = req.body;
+    const date = dateHelpers.createDateFromString(stringDate);
+    if (!date.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const session = await mongoose.startSession();
+
+    session.startTransaction();
+
+    try {
+      const dailyInventory = await DailyInventory.findOne({
+        vendor,
+        driver,
+        date: date.data,
+        completed: true,
+      });
+      if (!dailyInventory) {
+        return next(
+          new APIError(
+            'Either daily inventory record does not exist or it has not been unloaded',
+            400
+          )
+        );
+      }
+      if (
+        Number.isNaN(parseInt(dailyInventory.expectedReturned18, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedReturned20, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedEmpty18, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedEmpty20, 10))
+      ) {
+        return next(
+          new APIError('Please get expected jars for this inventory first', 400)
+        );
+      }
+      dailyInventory.unloadReturned18 =
+        unloadReturned18 || dailyInventory.unloadReturned18;
+      dailyInventory.unloadReturned20 =
+        unloadReturned20 || dailyInventory.unloadReturned20;
+      dailyInventory.unloadEmpty18 =
+        unloadEmpty18 || dailyInventory.unloadEmpty18;
+      dailyInventory.unloadEmpty20 =
+        unloadEmpty20 || dailyInventory.unloadEmpty20;
+      dailyInventory.missingReturned18 =
+        dailyInventory.expectedReturned18 -
+        (unloadReturned18 || dailyInventory.unloadReturned18);
+      dailyInventory.missingReturned20 =
+        dailyInventory.expectedReturned20 -
+        (unloadReturned20 || dailyInventory.unloadReturned20);
+      dailyInventory.missingEmpty18 =
+        dailyInventory.expectedEmpty18 -
+        (unloadEmpty18 || dailyInventory.unloadEmpty18);
+      dailyInventory.missingEmpty20 =
+        dailyInventory.expectedEmpty20 -
+        (unloadEmpty20 || dailyInventory.unloadEmpty20);
+      dailyInventory.completed = true;
+      await dailyInventory.save();
+      await session.commitTransaction();
+    } catch (err) {
+      return next(
+        new APIError('Could not update daily inventory. Please try again', 500)
+      );
+    }
+    return successfulRequest(res, 200, { message: 'Daily inventory updated' });
+  }),
+  getDailyJarAndPayment: catchAsync(async (req, res, next) => {
+    const { id, vendor, driver, date: stringDate } = req.query;
+    if (id) {
+      const dailyJarAndPayment = await DailyJarAndPayment.findById(id);
+      if (!dailyJarAndPayment) {
+        return next(new APIError('Entry not found', 400));
+      }
+      return successfulRequest(res, 200, { dailyJarAndPayment });
+    }
+    const date = dateHelpers.createDateFromString(stringDate);
+    if (!date.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const dailyJarAndPayment = await DailyJarAndPayment.findOne({
+      vendor,
+      driver,
+      date: date.data,
+    });
+    if (!dailyJarAndPayment) {
+      return next(new APIError('Entry not found', 400));
+    }
+    return successfulRequest(res, 200, { dailyJarAndPayment });
+  }),
   getExpectedUnload: catchAsync(async (req, res, next) => {
     const { vendor, driver, date: stringDate } = req.query;
     const date = dateHelpers.createDateFromString(stringDate);
@@ -561,6 +657,14 @@ const inventoryController = {
     if (!dailyJarAndPayment) {
       return next(new APIError('Entry not found', 400));
     }
+    const dailyInventory = await DailyInventory.findOne({
+      vendor: dailyJarAndPayment.vendor,
+      driver: dailyJarAndPayment.driver,
+      date: dailyJarAndPayment.date,
+    });
+    if (!dailyInventory) {
+      return next(new APIError('Daily inventory not found', 400));
+    }
     const transactionInd = dailyJarAndPayment.transactions.findIndex(
       el => el._id.toString() === transaction
     );
@@ -576,166 +680,35 @@ const inventoryController = {
     }
     dailyJarAndPayment.transactions[transactionInd] = actualTransaction;
     await dailyJarAndPayment.save();
-    const expected = await DailyInventory.aggregate([
-      {
-        $facet: {
-          totalEmpty: [
-            {
-              $match: {
-                vendor: mongoose.Types.ObjectId(dailyJarAndPayment.vendor),
-                driver: mongoose.Types.ObjectId(dailyJarAndPayment.driver),
-                date: dailyJarAndPayment.date,
-              },
-            },
-            {
-              $lookup: {
-                from: 'dailyjarandpayments',
-                let: {
-                  date: '$date',
-                  vendor: '$vendor',
-                  driver: '$driver',
-                },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $and: [
-                          { $eq: ['$vendor', '$$vendor'] },
-                          { $eq: ['$driver', '$$driver'] },
-                          { $eq: ['$date', '$$date'] },
-                        ],
-                      },
-                    },
-                  },
-                ],
-                as: 'jarAndPayment',
-              },
-            },
-            {
-              $unwind: {
-                path: '$jarAndPayment',
-                preserveNullAndEmptyArrays: false,
-              },
-            },
-            {
-              $unwind: {
-                path: '$jarAndPayment.transactions',
-                preserveNullAndEmptyArrays: false,
-              },
-            },
-            {
-              $group: {
-                _id: '$jarAndPayment.transactions.product',
-                totalEmptyCollected: {
-                  $sum: '$jarAndPayment.transactions.emptyCollected',
-                },
-              },
-            },
-          ],
-          totalSold: [
-            {
-              $match: {
-                vendor: mongoose.Types.ObjectId(dailyJarAndPayment.vendor),
-                driver: mongoose.Types.ObjectId(dailyJarAndPayment.driver),
-                date: dailyJarAndPayment.date,
-              },
-            },
-            {
-              $lookup: {
-                from: 'dailyjarandpayments',
-                let: {
-                  date: '$date',
-                  vendor: '$vendor',
-                  driver: '$driver',
-                },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $and: [
-                          { $eq: ['$vendor', '$$vendor'] },
-                          { $eq: ['$driver', '$$driver'] },
-                          { $eq: ['$date', '$$date'] },
-                        ],
-                      },
-                    },
-                  },
-                ],
-                as: 'jarAndPayment',
-              },
-            },
-            {
-              $unwind: {
-                path: '$jarAndPayment',
-                preserveNullAndEmptyArrays: false,
-              },
-            },
-            {
-              $unwind: {
-                path: '$jarAndPayment.transactions',
-                preserveNullAndEmptyArrays: false,
-              },
-            },
-            {
-              $group: {
-                _id: '$jarAndPayment.transactions.product',
-                totalSoldJars: {
-                  $sum: '$jarAndPayment.transactions.soldJars',
-                },
-              },
-            },
-          ],
-          load: [
-            {
-              $match: {
-                vendor: mongoose.Types.ObjectId(dailyJarAndPayment.vendor),
-                driver: mongoose.Types.ObjectId(dailyJarAndPayment.driver),
-                date: dailyJarAndPayment.date,
-              },
-            },
-            {
-              $project: {
-                load18: 1,
-                load20: 1,
-              },
-            },
-          ],
-        },
-      },
-    ]);
-    if (
-      expected.length === 0 ||
-      !expected[0].load ||
-      expected[0].load.length === 0
-    ) {
-      return next(new APIError('This inventory does not exist', 400));
+    if (dailyInventory.completed) {
+      let sold18 = 0;
+      let sold20 = 0;
+      let empty18 = 0;
+      let empty20 = 0;
+      dailyJarAndPayment.transactions.forEach(el => {
+        if (el.product === '18L') {
+          sold18 += +(el.soldJars || 0);
+          empty18 += +(el.emptyCollected || 0);
+        }
+        if (el.product === '20L') {
+          sold20 += +(el.soldJars || 0);
+          empty20 += +(el.emptyCollected || 0);
+        }
+      });
+      dailyInventory.expectedReturned18 = dailyInventory.load18 - sold18;
+      dailyInventory.expectedReturned20 = dailyInventory.load20 - sold20;
+      dailyInventory.expectedEmpty18 = empty18;
+      dailyInventory.expectedEmpty20 = empty20;
+      dailyInventory.missingReturned18 =
+        dailyInventory.expectedReturned18 - dailyInventory.unloadReturned18;
+      dailyInventory.missingReturned20 =
+        dailyInventory.expectedReturned20 - dailyInventory.unloadReturned20;
+      dailyInventory.missingEmpty18 =
+        dailyInventory.expectedEmpty18 - dailyInventory.unloadEmpty18;
+      dailyInventory.missingEmpty20 =
+        dailyInventory.expectedEmpty20 - dailyInventory.unloadEmpty20;
+      await dailyInventory.save();
     }
-    const sold18 = expected[0]?.totalSold?.filter(el => el._id === '18L');
-    const expectedReturned18 =
-      expected[0].load[0]?.load18 - (sold18[0]?.totalSoldJars || 0) || 0;
-    const sold20 = expected[0]?.totalSold?.filter(el => el._id === '20L');
-    const expectedReturned20 =
-      expected[0].load[0]?.load20 - (sold20[0]?.totalSoldJars || 0) || 0;
-    const empty18 = expected[0]?.totalEmpty?.filter(el => el._id === '18L');
-    const expectedEmpty18 = empty18[0]?.totalEmptyCollected || 0;
-    const empty20 = expected[0]?.totalEmpty?.filter(el => el._id === '20L');
-    const expectedEmpty20 = empty20[0]?.totalEmptyCollected || 0;
-    const obj = {
-      expectedReturned18,
-      expectedReturned20,
-      expectedEmpty18,
-      expectedEmpty20,
-    };
-    await DailyInventory.updateOne(
-      {
-        vendor: dailyJarAndPayment.vendor,
-        driver: dailyJarAndPayment.driver,
-        date: dailyJarAndPayment.date,
-      },
-      {
-        ...obj,
-      }
-    );
     return successfulRequest(res, 200, { message: 'Transaction updated' });
   }),
 };

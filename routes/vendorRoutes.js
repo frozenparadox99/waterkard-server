@@ -126,11 +126,19 @@ router.get(
   vendorController.getDailyInventoryStatus
 );
 
-router.post(
-  '/inventory/daily-unload',
-  inventoryValidators.unloadDailyInventory,
-  vendorController.unloadDailyInventory
+router.get(
+  '/inventory/daily-jar-payment',
+  inventoryValidators.getDailyJarAndPayment,
+  vendorController.getDailyJarAndPayment
 );
+
+router
+  .route('/inventory/daily-unload')
+  .post(
+    inventoryValidators.unloadDailyInventory,
+    vendorController.unloadDailyInventory
+  )
+  .patch(inventoryValidators.updateUnload, vendorController.updateUnload);
 
 router.get(
   '/inventory/get-expected-unload',

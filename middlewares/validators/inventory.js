@@ -439,7 +439,7 @@ const inventoryValidators = {
           return errors;
         }),
     })
-      .or(
+      .and(
         'unloadReturned18',
         'unloadReturned20',
         'unloadEmpty18',
@@ -448,9 +448,9 @@ const inventoryValidators = {
       .error(errors => {
         errors.forEach(er => {
           switch (er.code) {
-            case 'object.missing':
+            case 'object.and':
               er.message =
-                'One of unload returned or unload empty for 18L or 20L is required';
+                'Please enter unload returned and unload empty values for both 18L and 20L jars';
               break;
             default:
               break;
@@ -711,6 +711,128 @@ const inventoryValidators = {
     }
     return next();
   },
+  getDailyJarAndPayment: (req, res, next) => {
+    const schema = Joi.object({
+      id: Joi.string()
+        .alphanum()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Jar and payment is required';
+                break;
+              case 'any.invalid':
+                er.message =
+                  'Invalid jar and payment. Please enter a valid jar and payment';
+                break;
+              default:
+                er.message = 'Invalid input for jar and payment';
+            }
+          });
+          return errors;
+        }),
+      vendor: Joi.string()
+        .alphanum()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Vendor is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid vendor. Please enter a valid vendor';
+                break;
+              default:
+                er.message = 'Invalid input for vendor';
+            }
+          });
+          return errors;
+        }),
+      driver: Joi.string()
+        .alphanum()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Driver is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid driver. Please enter a valid driver';
+                break;
+              default:
+                er.message = 'Invalid input for driver';
+            }
+          });
+          return errors;
+        }),
+      date: Joi.string()
+        .trim()
+        .pattern(new RegExp(/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/i))
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Date is required';
+                break;
+              case 'string.pattern.base':
+                er.message = 'Invalid date';
+                break;
+              default:
+                er.message = 'Invalid input for date';
+            }
+          });
+          return errors;
+        }),
+    })
+      .xor('id', 'vendor')
+      .xor('id', 'driver')
+      .xor('id', 'date')
+      .and('vendor', 'driver', 'date')
+      .error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            case 'object.xor':
+              er.message = 'Invalid input';
+              break;
+            case 'object.and':
+              er.message = 'Vendor, driver and date are required';
+              break;
+            default:
+              break;
+          }
+        });
+        return errors;
+      });
+    const result = schema.validate(req.query, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
   updateDailyTransaction: (req, res, next) => {
     const schema = Joi.object({
       jarAndPayment: Joi.string()
@@ -792,6 +914,163 @@ const inventoryValidators = {
           return errors;
         }),
     }).or('soldJars', 'emptyCollected');
+    const result = schema.validate(req.body, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
+  updateUnload: (req, res, next) => {
+    const schema = Joi.object({
+      vendor: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Vendor is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid vendor. Please enter a valid vendor';
+                break;
+              default:
+                er.message = 'Invalid input for vendor';
+            }
+          });
+          return errors;
+        }),
+      driver: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Driver is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid driver. Please enter a valid driver';
+                break;
+              default:
+                er.message = 'Invalid input for driver';
+            }
+          });
+          return errors;
+        }),
+      unloadReturned18: Joi.number()
+        .min(0)
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Unload of 18L jars is required';
+                break;
+              case 'number.min':
+                er.message = 'Unload of 18L jars cannot be negative';
+                break;
+              default:
+                er.message = 'Invalid input for unload of 18L jars';
+            }
+          });
+          return errors;
+        }),
+      unloadReturned20: Joi.number()
+        .min(0)
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Unload of 20L jars is required';
+                break;
+              case 'number.min':
+                er.message = 'Unload of 20L jars cannot be negative';
+                break;
+              default:
+                er.message = 'Invalid input for unload of 20L jars';
+            }
+          });
+          return errors;
+        }),
+      unloadEmpty18: Joi.number()
+        .min(0)
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              default:
+                er.message = 'Invalid input for empty 18L jars';
+            }
+          });
+          return errors;
+        }),
+      unloadEmpty20: Joi.number()
+        .min(0)
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              default:
+                er.message = 'Invalid input for empty 20L jars';
+            }
+          });
+          return errors;
+        }),
+      date: Joi.string()
+        .required()
+        .trim()
+        .pattern(new RegExp(/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/i))
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Date is required';
+                break;
+              case 'string.pattern.base':
+                er.message = 'Invalid date';
+                break;
+              default:
+                er.message = 'Invalid input for date';
+            }
+          });
+          return errors;
+        }),
+    })
+      .or(
+        'unloadReturned18',
+        'unloadReturned20',
+        'unloadEmpty18',
+        'unloadEmpty20'
+      )
+      .error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            case 'object.or':
+              er.message =
+                'Please enter one of unload returned and unload empty values for 18L or 20L jars';
+              break;
+            default:
+              break;
+          }
+        });
+        return errors;
+      });
     const result = schema.validate(req.body, {
       abortEarly: false,
     });
