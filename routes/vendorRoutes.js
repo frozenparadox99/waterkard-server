@@ -149,7 +149,7 @@ router.get(
 router
   .route('/transactions')
   .get(
-    // inventoryValidators.getDailyTransactionsByCustomer,
+    inventoryValidators.getDailyTransactionsByCustomer,
     vendorController.getDailyTransactionsByCustomer
   )
   .patch(
