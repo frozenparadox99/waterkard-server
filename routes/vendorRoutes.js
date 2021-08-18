@@ -19,6 +19,12 @@ router.get(
   vendorController.getHomeScreen
 );
 
+router.get(
+  '/stock-details',
+  vendorValidators.getHomeScreen,
+  vendorController.getStockDetails
+);
+
 router.post(
   '/auth/register',
   vendorValidators.registerVendor,
