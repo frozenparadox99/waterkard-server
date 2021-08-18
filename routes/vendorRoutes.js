@@ -97,6 +97,8 @@ router.get(
   vendorController.getDriverPayments
 );
 
+router.get('/driver/paymentList', vendorController.getDriverToVendorPayment);
+
 router.post('/order', orderValidators.addOrder, vendorController.addOrder);
 router.get('/order/all', vendorController.getAllOrders);
 

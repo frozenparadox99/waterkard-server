@@ -172,6 +172,21 @@ const paymentController = {
     }
     return successfulRequest(res, 201, { driverPayment });
   }),
+  getDriverToVendorPayment: catchAsync(async (req, res, next) => {
+    const { driver } = req.query;
+
+    if (!driver) {
+      return next(new APIError('Invalid driver', 400));
+    }
+
+    const driverPayments = await DriverPayment.find({
+      driver,
+      from: 'Driver',
+    });
+    console.log(driverPayments);
+
+    return successfulRequest(res, 200, { driverPayments });
+  }),
   getDriverPayments: catchAsync(async (req, res, next) => {
     const { vendor } = req.query;
     const driverPayments = await Driver.aggregate([
