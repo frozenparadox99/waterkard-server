@@ -39,11 +39,13 @@ router.get(
   vendorController.getCustomersByOrderDate
 );
 
-router.post(
-  '/customer/payment',
-  customerPaymentValidators.addCustomerPayment,
-  vendorController.addCustomerPayment
-);
+router
+  .route('/customer/payment')
+  .get(vendorController.getCustomerPayment)
+  .post(
+    customerPaymentValidators.addCustomerPayment,
+    vendorController.addCustomerPayment
+  );
 
 router.post(
   '/customer/add-product',

@@ -91,6 +91,21 @@ const paymentController = {
 
     return successfulRequest(res, 201, {});
   }),
+  getCustomerPayment: catchAsync(async (req, res, next) => {
+    const { customer, vendor } = req.query;
+
+    if (!vendor) {
+      return next(new APIError('Invalid vendor', 400));
+    }
+    if (!customer) {
+      return next(new APIError('Invalid customer', 400));
+    }
+
+    const customerPayments = await CustomerPayment.find({ customer, vendor });
+    console.log(customerPayments);
+
+    return successfulRequest(res, 200, { customerPayments });
+  }),
   addDriverPayment: catchAsync(async (req, res, next) => {
     const {
       vendor,
