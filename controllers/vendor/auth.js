@@ -6,6 +6,7 @@ const TotalInventory = require('../../models/totalInventoryModel');
 const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
 const { successfulRequest } = require('../../utils/responses');
+const dateHelpers = require('../../helpers/date.helpers');
 
 const authController = {
   registerVendor: catchAsync(async (req, res, next) => {
@@ -519,7 +520,16 @@ const authController = {
     return successfulRequest(res, 200, { home: home[0] });
   }),
   getStockDetails: catchAsync(async (req, res, next) => {
-    const { vendor } = req.query;
+    const { vendor, date: stringDate } = req.query;
+    const date = dateHelpers.createDateFromString(
+      stringDate ||
+        `${new Date().getDate()}/${
+          new Date().getMonth() + 1
+        }/${new Date().getFullYear()}`
+    );
+    if (!date.success) {
+      return new APIError('Invalid date', 400);
+    }
     const home = await Vendor.aggregate([
       {
         $facet: {
@@ -618,7 +628,12 @@ const authController = {
                 pipeline: [
                   {
                     $match: {
-                      $expr: { $eq: ['$vendor', '$$vendor'] },
+                      $expr: {
+                        $and: [
+                          { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$date', date.data] },
+                        ],
+                      },
                     },
                   },
                   {
@@ -674,6 +689,7 @@ const authController = {
                       $expr: {
                         $and: [
                           { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$date', date.data] },
                           { $eq: ['$completed', true] },
                         ],
                       },
@@ -703,12 +719,6 @@ const authController = {
             {
               $group: {
                 _id: '$_id',
-                totalUnloadReturned18: {
-                  $sum: '$dailyinventories.unloadReturned18',
-                },
-                totalUnloadReturned20: {
-                  $sum: '$dailyinventories.unloadReturned20',
-                },
                 totalUnloadEmpty18: {
                   $sum: '$dailyinventories.unloadEmpty18',
                 },
@@ -739,7 +749,10 @@ const authController = {
                   {
                     $match: {
                       $expr: {
-                        $eq: ['$vendor', '$$vendor'],
+                        $and: [
+                          { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$date', date.data] },
+                        ],
                       },
                     },
                   },
@@ -771,9 +784,9 @@ const authController = {
                 totalSold: {
                   $sum: '$jarandpayments.transactions.soldJars',
                 },
-                totalEmpty: {
-                  $sum: '$jarandpayments.transactions.emptyCollected',
-                },
+                // totalEmpty: {
+                //   $sum: '$jarandpayments.transactions.emptyCollected',
+                // },
               },
             },
           ],
@@ -845,6 +858,85 @@ const authController = {
               },
             },
           ],
+          customerBalance: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'customers',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$vendor', '$$vendor'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                    },
+                  },
+                ],
+                as: 'customers',
+              },
+            },
+            {
+              $unwind: {
+                path: '$customers',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $lookup: {
+                from: 'customerproducts',
+                let: {
+                  customer: '$customers._id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$customer', '$$customer'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      balanceJars: 1,
+                    },
+                  },
+                ],
+                as: 'customerproducts',
+              },
+            },
+            {
+              $unwind: {
+                path: '$customerproducts',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                balance: {
+                  $sum: '$customerproducts.balanceJars',
+                },
+              },
+            },
+          ],
           vendorName: [
             {
               $match: {
@@ -884,21 +976,17 @@ const authController = {
         home[0].missingJars = 0;
       }
     }
-
     home[0].totalSold = home[0]?.soldAndEmptyJars[0]?.totalSold || 0;
-    home[0].totalEmpty = home[0]?.soldAndEmptyJars[0]?.totalEmpty || 0;
     home[0].vendorName = home[0].vendorName[0].fullVendorName;
     home[0].loadedJars =
       (home[0].loadedJars[0]?.totalLoad18 || 0) +
       (home[0].loadedJars[0]?.totalLoad20 || 0);
-    home[0].unloadedReturnedJars =
-      (home[0].unloadedJars[0]?.totalUnloadReturned18 || 0) +
-      (home[0].unloadedJars[0]?.totalUnloadReturned20 || 0);
-    home[0].unloadedEmptyJars =
+    home[0].emptyJars =
       (home[0].unloadedJars[0]?.totalUnloadEmpty18 || 0) +
       (home[0].unloadedJars[0]?.totalUnloadEmpty20 || 0);
-    home[0].emptyWithDrivers = home[0].totalEmpty - home[0].unloadedEmptyJars;
+    home[0].customersBalance = home[0].customerBalance[0]?.balance || 0;
     delete home[0].totalEmpty;
+    delete home[0].customerBalance;
     delete home[0].soldAndEmptyJars;
     delete home[0].unloadedJars;
     return successfulRequest(res, 200, { ...home[0] });

@@ -258,6 +258,21 @@ const vendorValidators = {
           });
           return errors;
         }),
+      date: Joi.string()
+        .trim()
+        .pattern(new RegExp(/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/i))
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'string.pattern.base':
+                er.message = 'Invalid date';
+                break;
+              default:
+                er.message = 'Invalid input for date';
+            }
+          });
+          return errors;
+        }),
     });
     const result = schema.validate(req.query, {
       abortEarly: false,

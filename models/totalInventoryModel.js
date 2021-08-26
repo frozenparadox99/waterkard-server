@@ -38,6 +38,8 @@ const totalInventorySchema = new mongoose.Schema(
         },
       },
     ],
+    totalStock: 0,
+    missingJars: 0,
   },
   {
     versionKey: false,
