@@ -306,18 +306,24 @@ const inventoryController = {
     session.startTransaction();
 
     try {
-      const totalInv = await TotalInventory.findOne({ vendor }, { session });
+      const totalInv = await TotalInventory.findOne({ vendor }, null, {
+        session,
+      });
       if (!totalInv) {
         return next(
           new APIError('Inventory does not exist for this vendor', 400)
         );
       }
-      const dailyInventory = await DailyInventory.findOne({
-        vendor,
-        driver,
-        date: date.data,
-        completed: false,
-      });
+      const dailyInventory = await DailyInventory.findOne(
+        {
+          vendor,
+          driver,
+          date: date.data,
+          completed: false,
+        },
+        null,
+        { session }
+      );
       if (!dailyInventory) {
         return next(
           new APIError(
@@ -361,6 +367,7 @@ const inventoryController = {
       await totalInv.save();
       await session.commitTransaction();
     } catch (err) {
+      console.log(err);
       return next(
         new APIError('Could not unload daily inventory. Please try again', 500)
       );
@@ -488,6 +495,15 @@ const inventoryController = {
         expectedEmpty18,
         expectedEmpty20,
       });
+    }
+    const dailyInventory = await DailyInventory.findOne({
+      vendor: mongoose.Types.ObjectId(vendor),
+      driver: mongoose.Types.ObjectId(driver),
+      date: date.data,
+      completed: false,
+    });
+    if (!dailyInventory) {
+      return next(new APIError('This inventory does not exist', 400));
     }
     const expected = await DailyInventory.aggregate([
       {
@@ -622,7 +638,21 @@ const inventoryController = {
       !expected[0].load ||
       expected[0].load.length === 0
     ) {
-      return next(new APIError('This inventory does not exist', 400));
+      const obj = {
+        expectedReturned18: dailyInventory.load18,
+        expectedReturned20: dailyInventory.load20,
+        expectedEmpty18: 0,
+        expectedEmpty20: 0,
+      };
+      await DailyInventory.updateOne(
+        { vendor, driver, date: date.data, completed: false },
+        {
+          ...obj,
+        }
+      );
+      return successfulRequest(res, 200, {
+        ...obj,
+      });
     }
     const sold18 = expected[0]?.totalSold?.filter(el => el._id === '18L');
     const expectedReturned18 =
