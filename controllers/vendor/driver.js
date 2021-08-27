@@ -138,6 +138,13 @@ const driverController = {
         date: date.data,
         transactions,
       });
+      if (product === '18L') {
+        totalInventory.customerCoolJarBalance += soldJars - emptyCollected;
+      }
+      if (product === '20L') {
+        totalInventory.customerBottleJarBalance += soldJars - emptyCollected;
+      }
+      await totalInventory.save();
       return successfulRequest(res, 201, { dailyJarAndPayment: jarAndPayment });
     }
     const exists = dailyJarAndPayment.transactions.filter(

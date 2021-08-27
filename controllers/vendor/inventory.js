@@ -89,19 +89,14 @@ const inventoryController = {
     if (!parsedDate.success) {
       return next(new APIError('Invalid date', 400));
     }
-
     const session = await mongoose.startSession();
 
     session.startTransaction();
 
     try {
-      const currInv = await TotalInventory.findOne(
-        { vendor },
-        'vendor stock removedStock',
-        { session }
-      );
-      console.log(currInv);
-
+      const currInv = await TotalInventory.findOne({ vendor }, null, {
+        session,
+      });
       const coolJarsNetAdded = currInv.stock.reduce(
         (accumulator, currValue) => accumulator + currValue.coolJarStock,
         0
