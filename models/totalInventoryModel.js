@@ -38,14 +38,34 @@ const totalInventorySchema = new mongoose.Schema(
         },
       },
     ],
-    totalStock: 0,
-    missingJars: 0,
+    totalStock: { type: Number, min: 0, default: 0 },
+    godownCoolJarStock: { type: Number, min: 0, default: 0 },
+    godownBottleJarStock: { type: Number, min: 0, default: 0 },
+    missingCoolJars: { type: Number, min: 0, default: 0 },
+    missingBottleJars: { type: Number, min: 0, default: 0 },
+    customerCoolJarBalance: { type: Number, min: 0, default: 0 },
+    customerBottleJarBalance: { type: Number, min: 0, default: 0 },
   },
   {
     versionKey: false,
     timestamps: true,
   }
 );
+
+totalInventorySchema.pre('save', function preSave(next) {
+  if (this.isNew) {
+    this.godownCoolJarStock = this.stock.reduce(
+      (acc, curr) => acc + curr.coolJarStock,
+      0
+    );
+    this.godownBottleJarStock = this.stock.reduce(
+      (acc, curr) => acc + curr.bottleJarStock,
+      0
+    );
+    this.totalStock = this.godownCoolJarStock + this.godownBottleJarStock;
+  }
+  next();
+});
 
 const TotalInventory = mongoose.model('TotalInventory', totalInventorySchema);
 

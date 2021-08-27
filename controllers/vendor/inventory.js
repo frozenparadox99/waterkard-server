@@ -42,8 +42,6 @@ const inventoryController = {
             el.bottleJarStock += parseInt(bottleJarStock, 10);
           }
         });
-
-        await currInv.save();
       } else {
         console.log('here');
         currInv.stock.push({
@@ -51,10 +49,12 @@ const inventoryController = {
           bottleJarStock,
           dateAdded: parsedDate.data,
         });
-
-        await currInv.save();
       }
-
+      currInv.godownCoolJarStock += parseInt(coolJarStock, 10);
+      currInv.godownBottleJarStock += parseInt(bottleJarStock, 10);
+      currInv.totalStock +=
+        parseInt(coolJarStock, 10) + parseInt(bottleJarStock, 10);
+      await currInv.save();
       // commit the changes if everything was successful
       await session.commitTransaction();
     } catch (error) {
@@ -141,8 +141,6 @@ const inventoryController = {
             el.bottleJarStock += bottleJarStock;
           }
         });
-
-        await currInv.save();
       } else {
         console.log('here');
         currInv.removedStock.push({
@@ -150,9 +148,37 @@ const inventoryController = {
           bottleJarStock,
           dateAdded: parsedDate.data,
         });
-
-        await currInv.save();
       }
+      if (currInv.missingCoolJars > 0) {
+        if (coolJarStock > currInv.missingCoolJars) {
+          currInv.godownCoolJarStock -= coolJarStock - currInv.missingCoolJars;
+          currInv.missingCoolJars = 0;
+        } else if (coolJarStock === currInv.missingCoolJars) {
+          currInv.missingCoolJars = 0;
+        } else {
+          currInv.misingCoolJars -= coolJarStock;
+        }
+        currInv.totalStock -= coolJarStock;
+      } else {
+        currInv.godownCoolJarStock -= coolJarStock;
+        currInv.totalStock -= coolJarStock;
+      }
+      if (currInv.missingBottleJars > 0) {
+        if (bottleJarStock > currInv.missingBottleJars) {
+          currInv.godownBottleJarStock -=
+            bottleJarStock - currInv.missingBottleJars;
+          currInv.missingBottleJars = 0;
+        } else if (bottleJarStock === currInv.missingBottleJars) {
+          currInv.missingBottleJars = 0;
+        } else {
+          currInv.misingBottleJars -= bottleJarStock;
+        }
+        currInv.totalStock -= bottleJarStock;
+      } else {
+        currInv.godownBottleJarStock -= bottleJarStock;
+        currInv.totalStock -= bottleJarStock;
+      }
+      await currInv.save();
 
       // commit the changes if everything was successful
       await session.commitTransaction();
@@ -167,7 +193,7 @@ const inventoryController = {
       console.error(error);
 
       // rethrow the error
-      return next(new APIError('Failed to remove total inventory stock', 401));
+      return next(new APIError('Failed to remove total inventory stock', 500));
     } finally {
       // ending the session
       session.endSession();
@@ -194,13 +220,42 @@ const inventoryController = {
         )
       );
     }
-    await DailyInventory.create({
-      vendor,
-      driver,
-      load18,
-      load20,
-      date: date.data,
-    });
+    const session = await mongoose.startSession();
+
+    session.startTransaction();
+    try {
+      const totalInv = await TotalInventory.findOne({ vendor }, null, {
+        session,
+      });
+      if (!totalInv) {
+        return next(
+          new APIError(
+            'Inventory does not exist for this vendor. Please create it first',
+            400
+          )
+        );
+      }
+      await DailyInventory.create(
+        [
+          {
+            vendor,
+            driver,
+            load18,
+            load20,
+            date: date.data,
+          },
+        ],
+        { session }
+      );
+      totalInv.godownCoolJarStock -= load18;
+      totalInv.godownBottleJarStock -= load20;
+      await totalInv.save();
+      await session.commitTransaction();
+    } catch (err) {
+      console.log(err);
+      await session.abortTransaction();
+      return next(new APIError('Failed to load daily inventory', 500));
+    }
     return successfulRequest(res, 201, {});
   }),
   getDailyInventory: catchAsync(async (req, res, next) => {
@@ -235,6 +290,12 @@ const inventoryController = {
     session.startTransaction();
 
     try {
+      const totalInv = await TotalInventory.findOne({ vendor }, { session });
+      if (!totalInv) {
+        return next(
+          new APIError('Inventory does not exist for this vendor', 400)
+        );
+      }
       const dailyInventory = await DailyInventory.findOne({
         vendor,
         driver,
@@ -272,7 +333,16 @@ const inventoryController = {
       dailyInventory.missingEmpty20 =
         dailyInventory.expectedEmpty20 - unloadEmpty20;
       dailyInventory.completed = true;
+      totalInv.godownCoolJarStock +=
+        dailyInventory.unloadReturned18 + dailyInventory.unloadEmpty18;
+      totalInv.godownBottleJarStock +=
+        dailyInventory.unloadReturned20 + dailyInventory.unloadEmpty20;
+      totalInv.missingCoolJars +=
+        dailyInventory.missingReturned18 + dailyInventory.missingEmpty18;
+      totalInv.missingBottleJars +=
+        dailyInventory.missingReturned20 + dailyInventory.missingEmpty20;
       await dailyInventory.save();
+      await totalInv.save();
       await session.commitTransaction();
     } catch (err) {
       return next(
