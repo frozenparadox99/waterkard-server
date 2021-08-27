@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Driver = require('../../models/driverModel');
 const Customer = require('../../models/customerModel');
 const CustomerProduct = require('../../models/customerProductModel');
+const TotalInventory = require('../../models/totalInventoryModel');
 const DailyInventory = require('../../models/dailyInventoryModel');
 const DailyJarAndPayment = require('../../models/dailyJarAndPaymentModel');
 const dateHelpers = require('../../helpers/date.helpers');
@@ -69,6 +70,17 @@ const driverController = {
     const date = dateHelpers.createDateFromString(stringDate);
     if (!date.success) {
       return next(new APIError('Invalid date', 400));
+    }
+    const totalInventory = await TotalInventory.findOne({
+      vendor,
+    });
+    if (!totalInventory) {
+      return next(
+        new APIError(
+          'Inventory does not exist for this vendor. Please create it first',
+          400
+        )
+      );
     }
     const dailyInventory = await DailyInventory.findOne({
       vendor,
@@ -147,6 +159,13 @@ const driverController = {
     });
     await dailyJarAndPayment.save();
     customerProduct.balanceJars += soldJars - emptyCollected;
+    if (product === '18L') {
+      totalInventory.customerCoolJarBalance += soldJars - emptyCollected;
+    }
+    if (product === '20L') {
+      totalInventory.customerBottleJarBalance += soldJars - emptyCollected;
+    }
+    await totalInventory.save();
     await customerProduct.save();
     return successfulRequest(res, 200, { dailyJarAndPayment });
   }),

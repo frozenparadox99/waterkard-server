@@ -235,6 +235,22 @@ const inventoryController = {
           )
         );
       }
+      if (load18 > totalInv.godownCoolJarStock) {
+        return next(
+          new APIError(
+            'You cannot load more cool jars than available in godown',
+            400
+          )
+        );
+      }
+      if (load20 > totalInv.godownBottleJarStock) {
+        return next(
+          new APIError(
+            'You cannot load more bottle jars than available in godown',
+            400
+          )
+        );
+      }
       await DailyInventory.create(
         [
           {
