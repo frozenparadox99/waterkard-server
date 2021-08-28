@@ -1000,7 +1000,6 @@ const authController = {
     // home[0].customersBalance = home[0].customerBalance[0]?.balance || 0;
     // delete home[0].totalEmpty;
     // delete home[0].customerBalance;
-    delete home[0].soldJars;
     delete home[0].unloadedJars;
     return successfulRequest(res, 200, { ...home[0] });
   }),
