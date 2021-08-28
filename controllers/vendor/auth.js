@@ -685,6 +685,7 @@ const authController = {
                         $and: [
                           { $eq: ['$vendor', '$$vendor'] },
                           { $eq: ['$date', date.data] },
+                          { $eq: ['$completed', false] },
                         ],
                       },
                     },
@@ -739,6 +740,7 @@ const authController = {
         },
       },
     ]);
+    console.log(home[0].soldAndEmptyJars);
     if ((home[0].vendorName?.length || 0) <= 0) {
       return next(new APIError('This vendor does not exist', 400));
     }
