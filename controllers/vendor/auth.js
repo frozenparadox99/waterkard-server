@@ -724,6 +724,65 @@ const authController = {
               },
             },
           ],
+          soldToday: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'dailyjarandpayments',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$date', date.data] },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      transactions: 1,
+                    },
+                  },
+                ],
+                as: 'jarandpayments',
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarandpayments',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarandpayments.transactions',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                totalSold: {
+                  $sum: '$jarandpayments.transactions.soldJars',
+                },
+              },
+            },
+          ],
           vendorName: [
             {
               $match: {
@@ -740,11 +799,11 @@ const authController = {
         },
       },
     ]);
-    console.log(home[0].soldAndEmptyJars);
     if ((home[0].vendorName?.length || 0) <= 0) {
       return next(new APIError('This vendor does not exist', 400));
     }
-    home[0].soldJars = home[0]?.soldAndEmptyJars[0]?.totalSold || 0;
+    home[0].soldJars = home[0]?.soldToday[0]?.totalSold || 0;
+    home[0].soldToCustomers = home[0]?.soldAndEmptyJars[0]?.totalSold || 0;
     home[0].vendorName = home[0].vendorName[0].fullVendorName;
     home[0].loadedJars =
       (home[0].loadedJars[0]?.totalLoad18 || 0) +
@@ -754,7 +813,7 @@ const authController = {
       (home[0].unloadedJars[0]?.totalUnloadEmpty20 || 0);
     home[0].emptyInVehicles = home[0]?.soldAndEmptyJars[0]?.totalEmpty || 0;
     home[0].jarsInVehicles =
-      home[0].loadedJars - home[0].soldJars + home[0].emptyInVehicles;
+      home[0].loadedJars - home[0].soldToCustomers + home[0].emptyInVehicles;
     home[0].missingJars =
       totalInventory.missingCoolJars + totalInventory.missingBottleJars;
     home[0].godownstock =
@@ -763,6 +822,7 @@ const authController = {
     home[0].customerBalance =
       totalInventory.customerCoolJarBalance +
       totalInventory.customerBottleJarBalance;
+    delete home[0].soldToCustomers;
     delete home[0].soldAndEmptyJars;
     delete home[0].emptyInVehicles;
     delete home[0].unloadedJars;
