@@ -83,7 +83,7 @@ const customerController = {
       if (product === '20L') {
         totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
       }
-      totalInv.totalStock += balanceJars;
+      totalInv.totalStock += parseInt(balanceJars, 10);
       await totalInv.save();
       // commit the changes if everything was successful
       await session.commitTransaction();
@@ -249,7 +249,7 @@ const customerController = {
       if (product === '20L') {
         totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
       }
-      totalInv.totalStock += balanceJars;
+      totalInv.totalStock += parseInt(balanceJars, 10);
       await totalInv.save();
       // commit the changes if everything was successful
       await session.commitTransaction();

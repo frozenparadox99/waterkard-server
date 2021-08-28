@@ -146,32 +146,33 @@ const inventoryController = {
       }
       if (currInv.missingCoolJars > 0) {
         if (coolJarStock > currInv.missingCoolJars) {
-          currInv.godownCoolJarStock -= coolJarStock - currInv.missingCoolJars;
+          currInv.godownCoolJarStock -=
+            parseInt(coolJarStock, 10) - currInv.missingCoolJars;
           currInv.missingCoolJars = 0;
         } else if (coolJarStock === currInv.missingCoolJars) {
           currInv.missingCoolJars = 0;
         } else {
-          currInv.misingCoolJars -= coolJarStock;
+          currInv.misingCoolJars -= parseInt(coolJarStock, 10);
         }
-        currInv.totalStock -= coolJarStock;
+        currInv.totalStock -= parseInt(coolJarStock, 10);
       } else {
-        currInv.godownCoolJarStock -= coolJarStock;
-        currInv.totalStock -= coolJarStock;
+        currInv.godownCoolJarStock -= parseInt(coolJarStock, 10);
+        currInv.totalStock -= parseInt(coolJarStock, 10);
       }
       if (currInv.missingBottleJars > 0) {
         if (bottleJarStock > currInv.missingBottleJars) {
           currInv.godownBottleJarStock -=
-            bottleJarStock - currInv.missingBottleJars;
+            parseInt(bottleJarStock, 10) - currInv.missingBottleJars;
           currInv.missingBottleJars = 0;
         } else if (bottleJarStock === currInv.missingBottleJars) {
           currInv.missingBottleJars = 0;
         } else {
-          currInv.misingBottleJars -= bottleJarStock;
+          currInv.misingBottleJars -= parseInt(bottleJarStock, 10);
         }
-        currInv.totalStock -= bottleJarStock;
+        currInv.totalStock -= parseInt(bottleJarStock, 10);
       } else {
-        currInv.godownBottleJarStock -= bottleJarStock;
-        currInv.totalStock -= bottleJarStock;
+        currInv.godownBottleJarStock -= parseInt(bottleJarStock, 10);
+        currInv.totalStock -= parseInt(bottleJarStock, 10);
       }
       await currInv.save();
 
