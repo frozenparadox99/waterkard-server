@@ -258,8 +258,8 @@ const inventoryController = {
         ],
         { session }
       );
-      totalInv.godownCoolJarStock -= load18;
-      totalInv.godownBottleJarStock -= load20;
+      totalInv.godownCoolJarStock -= parseInt(load18, 10);
+      totalInv.godownBottleJarStock -= parseInt(load20, 10);
       await totalInv.save();
       await session.commitTransaction();
     } catch (err) {
@@ -351,13 +351,17 @@ const inventoryController = {
         dailyInventory.expectedEmpty20 - unloadEmpty20;
       dailyInventory.completed = true;
       totalInv.godownCoolJarStock +=
-        dailyInventory.unloadReturned18 + dailyInventory.unloadEmpty18;
+        parseInt(dailyInventory.unloadReturned18, 10) +
+        parseInt(dailyInventory.unloadEmpty18, 10);
       totalInv.godownBottleJarStock +=
-        dailyInventory.unloadReturned20 + dailyInventory.unloadEmpty20;
+        parseInt(dailyInventory.unloadReturned20, 10) +
+        parseInt(dailyInventory.unloadEmpty20, 10);
       totalInv.missingCoolJars +=
-        dailyInventory.missingReturned18 + dailyInventory.missingEmpty18;
+        parseInt(dailyInventory.missingReturned18, 10) +
+        parseInt(dailyInventory.missingEmpty18, 10);
       totalInv.missingBottleJars +=
-        dailyInventory.missingReturned20 + dailyInventory.missingEmpty20;
+        parseInt(dailyInventory.missingReturned20, 10) +
+        parseInt(dailyInventory.missingEmpty20, 10);
       await dailyInventory.save();
       await totalInv.save();
       await session.commitTransaction();

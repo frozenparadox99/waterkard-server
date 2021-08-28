@@ -139,10 +139,12 @@ const driverController = {
         transactions,
       });
       if (product === '18L') {
-        totalInventory.customerCoolJarBalance += soldJars - emptyCollected;
+        totalInventory.customerCoolJarBalance +=
+          parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
       }
       if (product === '20L') {
-        totalInventory.customerBottleJarBalance += soldJars - emptyCollected;
+        totalInventory.customerBottleJarBalance +=
+          parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
       }
       await totalInventory.save();
       return successfulRequest(res, 201, { dailyJarAndPayment: jarAndPayment });
@@ -165,12 +167,15 @@ const driverController = {
       product,
     });
     await dailyJarAndPayment.save();
-    customerProduct.balanceJars += soldJars - emptyCollected;
+    customerProduct.balanceJars +=
+      parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
     if (product === '18L') {
-      totalInventory.customerCoolJarBalance += soldJars - emptyCollected;
+      totalInventory.customerCoolJarBalance +=
+        parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
     }
     if (product === '20L') {
-      totalInventory.customerBottleJarBalance += soldJars - emptyCollected;
+      totalInventory.customerBottleJarBalance +=
+        parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
     }
     await totalInventory.save();
     await customerProduct.save();

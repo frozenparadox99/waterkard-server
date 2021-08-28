@@ -78,10 +78,10 @@ const customerController = {
         { session }
       );
       if (product === '18L') {
-        totalInv.customerCoolJarBalance += balanceJars;
+        totalInv.customerCoolJarBalance += parseInt(balanceJars, 10);
       }
       if (product === '20L') {
-        totalInv.customerBottleJarBalance += balanceJars;
+        totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
       }
       totalInv.totalStock += balanceJars;
       await totalInv.save();
@@ -244,10 +244,10 @@ const customerController = {
         { session }
       );
       if (product === '18L') {
-        totalInv.customerCoolJarBalance += balanceJars;
+        totalInv.customerCoolJarBalance += parseInt(balanceJars, 10);
       }
       if (product === '20L') {
-        totalInv.customerBottleJarBalance += balanceJars;
+        totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
       }
       totalInv.totalStock += balanceJars;
       await totalInv.save();
