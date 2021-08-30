@@ -182,7 +182,6 @@ const customerController = {
     const currentProductsForCustomer = await CustomerProduct.find({
       customer,
     });
-    console.log(currentProductsForCustomer);
 
     // 2) Check the number of products. If it is 2 then no more can be added.
     if (

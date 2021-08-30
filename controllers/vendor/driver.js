@@ -146,6 +146,9 @@ const driverController = {
         totalInventory.customerBottleJarBalance +=
           parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
       }
+      customerProduct.balanceJars +=
+        parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
+      await customerProduct.save();
       await totalInventory.save();
       return successfulRequest(res, 201, { dailyJarAndPayment: jarAndPayment });
     }
