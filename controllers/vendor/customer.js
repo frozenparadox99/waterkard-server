@@ -77,13 +77,28 @@ const customerController = {
         ],
         { session }
       );
+      if (
+        product === '18L' &&
+        totalInv.godownCoolJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
+      if (
+        product === '20L' &&
+        totalInv.godownBottleJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
       if (product === '18L') {
         totalInv.customerCoolJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownCoolJarStock -= parseInt(balanceJars, 10);
       }
       if (product === '20L') {
         totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownBottleJarStock -= parseInt(balanceJars, 10);
       }
-      totalInv.totalStock += parseInt(balanceJars, 10);
       await totalInv.save();
       // commit the changes if everything was successful
       await session.commitTransaction();
@@ -242,13 +257,28 @@ const customerController = {
         ],
         { session }
       );
+      if (
+        product === '18L' &&
+        totalInv.godownCoolJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
+      if (
+        product === '20L' &&
+        totalInv.godownBottleJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
       if (product === '18L') {
         totalInv.customerCoolJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownCoolJarStock -= parseInt(balanceJars, 10);
       }
       if (product === '20L') {
         totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownBottleJarStock -= parseInt(balanceJars, 10);
       }
-      totalInv.totalStock += parseInt(balanceJars, 10);
       await totalInv.save();
       // commit the changes if everything was successful
       await session.commitTransaction();

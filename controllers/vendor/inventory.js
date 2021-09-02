@@ -137,7 +137,6 @@ const inventoryController = {
           }
         });
       } else {
-        console.log('here');
         currInv.removedStock.push({
           coolJarStock,
           bottleJarStock,
