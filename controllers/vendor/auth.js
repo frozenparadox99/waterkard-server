@@ -601,66 +601,66 @@ const authController = {
               },
             },
           ],
-          unloadedJars: [
-            {
-              $match: {
-                _id: mongoose.Types.ObjectId(vendor),
-              },
-            },
-            {
-              $project: {
-                _id: 1,
-              },
-            },
-            {
-              $lookup: {
-                from: 'dailyinventories',
-                let: {
-                  vendor: '$_id',
-                },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $and: [
-                          { $eq: ['$vendor', '$$vendor'] },
-                          { $eq: ['$date', date.data] },
-                          { $eq: ['$completed', true] },
-                        ],
-                      },
-                    },
-                  },
-                  {
-                    $project: {
-                      _id: 1,
-                      vendor: 1,
-                      unloadEmpty18: 1,
-                      unloadEmpty20: 1,
-                      completed: true,
-                    },
-                  },
-                ],
-                as: 'dailyinventories',
-              },
-            },
-            {
-              $unwind: {
-                path: '$dailyinventories',
-                preserveNullAndEmptyArrays: false,
-              },
-            },
-            {
-              $group: {
-                _id: '$_id',
-                totalUnloadEmpty18: {
-                  $sum: '$dailyinventories.unloadEmpty18',
-                },
-                totalUnloadEmpty20: {
-                  $sum: '$dailyinventories.unloadEmpty20',
-                },
-              },
-            },
-          ],
+          // unloadedJars: [
+          //   {
+          //     $match: {
+          //       _id: mongoose.Types.ObjectId(vendor),
+          //     },
+          //   },
+          //   {
+          //     $project: {
+          //       _id: 1,
+          //     },
+          //   },
+          //   {
+          //     $lookup: {
+          //       from: 'dailyinventories',
+          //       let: {
+          //         vendor: '$_id',
+          //       },
+          //       pipeline: [
+          //         {
+          //           $match: {
+          //             $expr: {
+          //               $and: [
+          //                 { $eq: ['$vendor', '$$vendor'] },
+          //                 { $eq: ['$date', date.data] },
+          //                 { $eq: ['$completed', true] },
+          //               ],
+          //             },
+          //           },
+          //         },
+          //         {
+          //           $project: {
+          //             _id: 1,
+          //             vendor: 1,
+          //             unloadEmpty18: 1,
+          //             unloadEmpty20: 1,
+          //             completed: true,
+          //           },
+          //         },
+          //       ],
+          //       as: 'dailyinventories',
+          //     },
+          //   },
+          //   {
+          //     $unwind: {
+          //       path: '$dailyinventories',
+          //       preserveNullAndEmptyArrays: false,
+          //     },
+          //   },
+          //   {
+          //     $group: {
+          //       _id: '$_id',
+          //       totalUnloadEmpty18: {
+          //         $sum: '$dailyinventories.unloadEmpty18',
+          //       },
+          //       totalUnloadEmpty20: {
+          //         $sum: '$dailyinventories.unloadEmpty20',
+          //       },
+          //     },
+          //   },
+          // ],
           soldAndEmptyJars: [
             {
               $match: {
@@ -685,7 +685,6 @@ const authController = {
                         $and: [
                           { $eq: ['$vendor', '$$vendor'] },
                           { $eq: ['$date', date.data] },
-                          { $eq: ['$completed', false] },
                         ],
                       },
                     },
@@ -808,10 +807,10 @@ const authController = {
     home[0].loadedJars =
       (home[0].loadedJars[0]?.totalLoad18 || 0) +
       (home[0].loadedJars[0]?.totalLoad20 || 0);
-    home[0].emptyJars =
-      (home[0].unloadedJars[0]?.totalUnloadEmpty18 || 0) +
-      (home[0].unloadedJars[0]?.totalUnloadEmpty20 || 0);
-    home[0].emptyInVehicles = home[0]?.soldAndEmptyJars[0]?.totalEmpty || 0;
+    // home[0].emptyJars =
+    //   (home[0].unloadedJars[0]?.totalUnloadEmpty18 || 0) +
+    //   (home[0].unloadedJars[0]?.totalUnloadEmpty20 || 0);
+    home[0].emptyJars = home[0]?.soldAndEmptyJars[0]?.totalEmpty || 0;
     home[0].jarsInVehicles =
       home[0].loadedJars - home[0].soldToCustomers + home[0].emptyInVehicles;
     home[0].missingJars =
@@ -824,7 +823,7 @@ const authController = {
       totalInventory.customerBottleJarBalance;
     delete home[0].soldToCustomers;
     delete home[0].soldAndEmptyJars;
-    delete home[0].emptyInVehicles;
+    // delete home[0].emptyInVehicles;
     delete home[0].unloadedJars;
     return successfulRequest(res, 200, { ...home[0] });
   }),
