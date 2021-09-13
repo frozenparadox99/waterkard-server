@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Customer = require('../../models/customerModel');
 const CustomerProduct = require('../../models/customerProductModel');
 const Order = require('../../models/orderModel');
+const TotalInventory = require('../../models/totalInventoryModel');
 const dateHelpers = require('../../helpers/date.helpers');
 const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
@@ -34,6 +35,17 @@ const customerController = {
     session.startTransaction();
 
     try {
+      const totalInv = await TotalInventory.findOne({ vendor }, null, {
+        session,
+      });
+      if (!totalInv) {
+        return next(
+          new APIError(
+            'Inventory does not exist for this vendor. Please create it first',
+            400
+          )
+        );
+      }
       customer = await Customer.create(
         [
           {
@@ -65,7 +77,29 @@ const customerController = {
         ],
         { session }
       );
-
+      if (
+        product === '18L' &&
+        totalInv.godownCoolJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
+      if (
+        product === '20L' &&
+        totalInv.godownBottleJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
+      if (product === '18L') {
+        totalInv.customerCoolJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownCoolJarStock -= parseInt(balanceJars, 10);
+      }
+      if (product === '20L') {
+        totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownBottleJarStock -= parseInt(balanceJars, 10);
+      }
+      await totalInv.save();
       // commit the changes if everything was successful
       await session.commitTransaction();
     } catch (error) {
@@ -155,12 +189,14 @@ const customerController = {
   addCustomerProduct: catchAsync(async (req, res, next) => {
     const { product, balanceJars, dispenser, deposit, rate, customer } =
       req.body;
-
+    const cust = await Customer.findById(customer);
+    if (!cust) {
+      return next(new APIError('Customer does not exist', 400));
+    }
     // 1) Get products for the current customer
     const currentProductsForCustomer = await CustomerProduct.find({
       customer,
     });
-    console.log(currentProductsForCustomer);
 
     // 2) Check the number of products. If it is 2 then no more can be added.
     if (
@@ -193,6 +229,21 @@ const customerController = {
     session.startTransaction();
 
     try {
+      const totalInv = await TotalInventory.findOne(
+        { vendor: cust.vendor },
+        null,
+        {
+          session,
+        }
+      );
+      if (!totalInv) {
+        return next(
+          new APIError(
+            'Inventory does not exist for this vendor. Please create it first',
+            400
+          )
+        );
+      }
       const customerProduct = await CustomerProduct.create(
         [
           {
@@ -206,7 +257,29 @@ const customerController = {
         ],
         { session }
       );
-
+      if (
+        product === '18L' &&
+        totalInv.godownCoolJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
+      if (
+        product === '20L' &&
+        totalInv.godownBottleJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
+      if (product === '18L') {
+        totalInv.customerCoolJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownCoolJarStock -= parseInt(balanceJars, 10);
+      }
+      if (product === '20L') {
+        totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownBottleJarStock -= parseInt(balanceJars, 10);
+      }
+      await totalInv.save();
       // commit the changes if everything was successful
       await session.commitTransaction();
     } catch (error) {

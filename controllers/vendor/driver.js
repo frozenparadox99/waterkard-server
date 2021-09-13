@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Driver = require('../../models/driverModel');
 const Customer = require('../../models/customerModel');
 const CustomerProduct = require('../../models/customerProductModel');
+const TotalInventory = require('../../models/totalInventoryModel');
 const DailyInventory = require('../../models/dailyInventoryModel');
 const DailyJarAndPayment = require('../../models/dailyJarAndPaymentModel');
 const dateHelpers = require('../../helpers/date.helpers');
@@ -70,6 +71,17 @@ const driverController = {
     if (!date.success) {
       return next(new APIError('Invalid date', 400));
     }
+    const totalInventory = await TotalInventory.findOne({
+      vendor,
+    });
+    if (!totalInventory) {
+      return next(
+        new APIError(
+          'Inventory does not exist for this vendor. Please create it first',
+          400
+        )
+      );
+    }
     const dailyInventory = await DailyInventory.findOne({
       vendor,
       driver,
@@ -126,6 +138,18 @@ const driverController = {
         date: date.data,
         transactions,
       });
+      if (product === '18L') {
+        totalInventory.customerCoolJarBalance +=
+          parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
+      }
+      if (product === '20L') {
+        totalInventory.customerBottleJarBalance +=
+          parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
+      }
+      customerProduct.balanceJars +=
+        parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
+      await customerProduct.save();
+      await totalInventory.save();
       return successfulRequest(res, 201, { dailyJarAndPayment: jarAndPayment });
     }
     const exists = dailyJarAndPayment.transactions.filter(
@@ -146,7 +170,17 @@ const driverController = {
       product,
     });
     await dailyJarAndPayment.save();
-    customerProduct.balanceJars += soldJars - emptyCollected;
+    customerProduct.balanceJars +=
+      parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
+    if (product === '18L') {
+      totalInventory.customerCoolJarBalance +=
+        parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
+    }
+    if (product === '20L') {
+      totalInventory.customerBottleJarBalance +=
+        parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
+    }
+    await totalInventory.save();
     await customerProduct.save();
     return successfulRequest(res, 200, { dailyJarAndPayment });
   }),

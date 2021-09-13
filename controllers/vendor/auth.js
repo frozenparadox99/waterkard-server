@@ -530,84 +530,18 @@ const authController = {
     if (!date.success) {
       return new APIError('Invalid date', 400);
     }
+    const totalInventory = await TotalInventory.findOne({ vendor });
+    if (!totalInventory) {
+      return next(
+        new APIError(
+          'Inventory does not exist for this vendor. Please create it first',
+          400
+        )
+      );
+    }
     const home = await Vendor.aggregate([
       {
         $facet: {
-          missingJars: [
-            {
-              $match: {
-                _id: mongoose.Types.ObjectId(vendor),
-              },
-            },
-            {
-              $project: {
-                _id: 1,
-              },
-            },
-            {
-              $lookup: {
-                from: 'dailyinventories',
-                let: {
-                  vendor: '$_id',
-                },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $and: [
-                          { $eq: ['$vendor', '$$vendor'] },
-                          { $eq: ['$completed', true] },
-                          {
-                            $or: [
-                              { $ne: ['$missingReturned18', 0] },
-                              { $ne: ['$missingReturned20', 0] },
-                              { $ne: ['$missingEmpty18', 0] },
-                              { $ne: ['$missingEmpty20', 0] },
-                            ],
-                          },
-                        ],
-                      },
-                    },
-                  },
-                  {
-                    $project: {
-                      _id: 1,
-                      vendor: 1,
-                      missingReturned18: 1,
-                      missingReturned20: 1,
-                      missingEmpty18: 1,
-                      missingEmpty20: 1,
-                      completed: true,
-                    },
-                  },
-                ],
-                as: 'dailyinventories',
-              },
-            },
-            {
-              $unwind: {
-                path: '$dailyinventories',
-                preserveNullAndEmptyArrays: false,
-              },
-            },
-            {
-              $group: {
-                _id: '$_id',
-                totalMissingReturned18: {
-                  $sum: '$dailyinventories.missingReturned18',
-                },
-                totalMissingReturned20: {
-                  $sum: '$dailyinventories.missingReturned20',
-                },
-                totalMissingEmpty18: {
-                  $sum: '$dailyinventories.missingEmpty18',
-                },
-                totalMissingEmpty20: {
-                  $sum: '$dailyinventories.missingEmpty20',
-                },
-              },
-            },
-          ],
           loadedJars: [
             {
               $match: {
@@ -700,8 +634,6 @@ const authController = {
                     $project: {
                       _id: 1,
                       vendor: 1,
-                      unloadReturned18: 1,
-                      unloadReturned20: 1,
                       unloadEmpty18: 1,
                       unloadEmpty20: 1,
                       completed: true,
@@ -730,6 +662,69 @@ const authController = {
             },
           ],
           soldAndEmptyJars: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'dailyjarandpayments',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$date', date.data] },
+                          { $eq: ['$completed', false] },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      transactions: 1,
+                    },
+                  },
+                ],
+                as: 'jarandpayments',
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarandpayments',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarandpayments.transactions',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                totalSold: {
+                  $sum: '$jarandpayments.transactions.soldJars',
+                },
+                totalEmpty: {
+                  $sum: '$jarandpayments.transactions.emptyCollected',
+                },
+              },
+            },
+          ],
+          soldToday: [
             {
               $match: {
                 _id: mongoose.Types.ObjectId(vendor),
@@ -785,156 +780,6 @@ const authController = {
                 totalSold: {
                   $sum: '$jarandpayments.transactions.soldJars',
                 },
-                // totalEmpty: {
-                //   $sum: '$jarandpayments.transactions.emptyCollected',
-                // },
-              },
-            },
-          ],
-          totalJars: [
-            {
-              $match: {
-                _id: mongoose.Types.ObjectId(vendor),
-              },
-            },
-            {
-              $project: {
-                _id: 1,
-              },
-            },
-            {
-              $lookup: {
-                from: 'totalinventories',
-                let: {
-                  vendor: '$_id',
-                },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $eq: ['$vendor', '$$vendor'],
-                      },
-                    },
-                  },
-                  {
-                    $project: {
-                      _id: 1,
-                      vendor: 1,
-                      stock: 1,
-                      removedStock: 1,
-                    },
-                  },
-                ],
-                as: 'totalinventories',
-              },
-            },
-            {
-              $unwind: {
-                path: '$totalinventories',
-                preserveNullAndEmptyArrays: false,
-              },
-            },
-            {
-              $addFields: {
-                totalCoolJarStock: {
-                  $sum: '$totalinventories.stock.coolJarStock',
-                },
-                totalBottleJarStock: {
-                  $sum: '$totalinventories.stock.bottleJarStock',
-                },
-                totalRemovedCoolJarStock: {
-                  $sum: '$totalinventories.removedStock.coolJarStock',
-                },
-                totalRemovedBottleJarStock: {
-                  $sum: '$totalinventories.removedStock.bottleJarStock',
-                },
-              },
-            },
-            {
-              $project: {
-                totalCoolJarStock: 1,
-                totalBottleJarStock: 1,
-                totalRemovedCoolJarStock: 1,
-                totalRemovedBottleJarStock: 1,
-              },
-            },
-          ],
-          customerBalance: [
-            {
-              $match: {
-                _id: mongoose.Types.ObjectId(vendor),
-              },
-            },
-            {
-              $project: {
-                _id: 1,
-              },
-            },
-            {
-              $lookup: {
-                from: 'customers',
-                let: {
-                  vendor: '$_id',
-                },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $eq: ['$vendor', '$$vendor'],
-                      },
-                    },
-                  },
-                  {
-                    $project: {
-                      _id: 1,
-                    },
-                  },
-                ],
-                as: 'customers',
-              },
-            },
-            {
-              $unwind: {
-                path: '$customers',
-                preserveNullAndEmptyArrays: false,
-              },
-            },
-            {
-              $lookup: {
-                from: 'customerproducts',
-                let: {
-                  customer: '$customers._id',
-                },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $eq: ['$customer', '$$customer'],
-                      },
-                    },
-                  },
-                  {
-                    $project: {
-                      _id: 1,
-                      balanceJars: 1,
-                    },
-                  },
-                ],
-                as: 'customerproducts',
-              },
-            },
-            {
-              $unwind: {
-                path: '$customerproducts',
-                preserveNullAndEmptyArrays: false,
-              },
-            },
-            {
-              $group: {
-                _id: '$_id',
-                balance: {
-                  $sum: '$customerproducts.balanceJars',
-                },
               },
             },
           ],
@@ -957,27 +802,8 @@ const authController = {
     if ((home[0].vendorName?.length || 0) <= 0) {
       return next(new APIError('This vendor does not exist', 400));
     }
-    if ((home[0].missingJars?.length || 0) <= 0) {
-      home[0].missingJars = 0;
-    }
-    if (home[0].totalJars !== 0) {
-      home[0].totalJars =
-        (home[0].totalJars[0]?.totalCoolJarStock || 0) +
-        (home[0].totalJars[0]?.totalBottleJarStock || 0) -
-        ((home[0].totalJars[0]?.totalRemovedCoolJarStock || 0) +
-          (home[0].totalJars[0]?.totalRemovedBottleJarStock || 0));
-    }
-    if (home[0].missingJars !== 0) {
-      home[0].missingJars =
-        (home[0].missingJars[0]?.totalMissingReturned18 || 0) +
-        (home[0].missingJars[0]?.totalMissingReturned20 || 0) +
-        (home[0].missingJars[0]?.totalMissingEmpty18 || 0) +
-        (home[0].missingJars[0]?.totalMissingEmpty20 || 0);
-      if (home[0].missingJars < 0) {
-        home[0].missingJars = 0;
-      }
-    }
-    home[0].totalSold = home[0]?.soldAndEmptyJars[0]?.totalSold || 0;
+    home[0].soldJars = home[0]?.soldToday[0]?.totalSold || 0;
+    home[0].soldToCustomers = home[0]?.soldAndEmptyJars[0]?.totalSold || 0;
     home[0].vendorName = home[0].vendorName[0].fullVendorName;
     home[0].loadedJars =
       (home[0].loadedJars[0]?.totalLoad18 || 0) +
@@ -985,10 +811,20 @@ const authController = {
     home[0].emptyJars =
       (home[0].unloadedJars[0]?.totalUnloadEmpty18 || 0) +
       (home[0].unloadedJars[0]?.totalUnloadEmpty20 || 0);
-    home[0].customersBalance = home[0].customerBalance[0]?.balance || 0;
-    delete home[0].totalEmpty;
-    delete home[0].customerBalance;
+    home[0].emptyInVehicles = home[0]?.soldAndEmptyJars[0]?.totalEmpty || 0;
+    home[0].jarsInVehicles =
+      home[0].loadedJars - home[0].soldToCustomers + home[0].emptyInVehicles;
+    home[0].missingJars =
+      totalInventory.missingCoolJars + totalInventory.missingBottleJars;
+    home[0].godownstock =
+      totalInventory.godownCoolJarStock + totalInventory.godownBottleJarStock;
+    home[0].totalStock = totalInventory.totalStock;
+    home[0].customerBalance =
+      totalInventory.customerCoolJarBalance +
+      totalInventory.customerBottleJarBalance;
+    delete home[0].soldToCustomers;
     delete home[0].soldAndEmptyJars;
+    delete home[0].emptyInVehicles;
     delete home[0].unloadedJars;
     return successfulRequest(res, 200, { ...home[0] });
   }),

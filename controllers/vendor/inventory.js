@@ -42,8 +42,6 @@ const inventoryController = {
             el.bottleJarStock += parseInt(bottleJarStock, 10);
           }
         });
-
-        await currInv.save();
       } else {
         console.log('here');
         currInv.stock.push({
@@ -51,10 +49,12 @@ const inventoryController = {
           bottleJarStock,
           dateAdded: parsedDate.data,
         });
-
-        await currInv.save();
       }
-
+      currInv.godownCoolJarStock += parseInt(coolJarStock, 10);
+      currInv.godownBottleJarStock += parseInt(bottleJarStock, 10);
+      currInv.totalStock +=
+        parseInt(coolJarStock, 10) + parseInt(bottleJarStock, 10);
+      await currInv.save();
       // commit the changes if everything was successful
       await session.commitTransaction();
     } catch (error) {
@@ -89,19 +89,14 @@ const inventoryController = {
     if (!parsedDate.success) {
       return next(new APIError('Invalid date', 400));
     }
-
     const session = await mongoose.startSession();
 
     session.startTransaction();
 
     try {
-      const currInv = await TotalInventory.findOne(
-        { vendor },
-        'vendor stock removedStock',
-        { session }
-      );
-      console.log(currInv);
-
+      const currInv = await TotalInventory.findOne({ vendor }, null, {
+        session,
+      });
       const coolJarsNetAdded = currInv.stock.reduce(
         (accumulator, currValue) => accumulator + currValue.coolJarStock,
         0
@@ -141,18 +136,44 @@ const inventoryController = {
             el.bottleJarStock += bottleJarStock;
           }
         });
-
-        await currInv.save();
       } else {
-        console.log('here');
         currInv.removedStock.push({
           coolJarStock,
           bottleJarStock,
           dateAdded: parsedDate.data,
         });
-
-        await currInv.save();
       }
+      if (currInv.missingCoolJars > 0) {
+        if (coolJarStock > currInv.missingCoolJars) {
+          currInv.godownCoolJarStock -=
+            parseInt(coolJarStock, 10) - currInv.missingCoolJars;
+          currInv.missingCoolJars = 0;
+        } else if (coolJarStock === currInv.missingCoolJars) {
+          currInv.missingCoolJars = 0;
+        } else {
+          currInv.misingCoolJars -= parseInt(coolJarStock, 10);
+        }
+        currInv.totalStock -= parseInt(coolJarStock, 10);
+      } else {
+        currInv.godownCoolJarStock -= parseInt(coolJarStock, 10);
+        currInv.totalStock -= parseInt(coolJarStock, 10);
+      }
+      if (currInv.missingBottleJars > 0) {
+        if (bottleJarStock > currInv.missingBottleJars) {
+          currInv.godownBottleJarStock -=
+            parseInt(bottleJarStock, 10) - currInv.missingBottleJars;
+          currInv.missingBottleJars = 0;
+        } else if (bottleJarStock === currInv.missingBottleJars) {
+          currInv.missingBottleJars = 0;
+        } else {
+          currInv.misingBottleJars -= parseInt(bottleJarStock, 10);
+        }
+        currInv.totalStock -= parseInt(bottleJarStock, 10);
+      } else {
+        currInv.godownBottleJarStock -= parseInt(bottleJarStock, 10);
+        currInv.totalStock -= parseInt(bottleJarStock, 10);
+      }
+      await currInv.save();
 
       // commit the changes if everything was successful
       await session.commitTransaction();
@@ -167,7 +188,7 @@ const inventoryController = {
       console.error(error);
 
       // rethrow the error
-      return next(new APIError('Failed to remove total inventory stock', 401));
+      return next(new APIError('Failed to remove total inventory stock', 500));
     } finally {
       // ending the session
       session.endSession();
@@ -194,13 +215,58 @@ const inventoryController = {
         )
       );
     }
-    await DailyInventory.create({
-      vendor,
-      driver,
-      load18,
-      load20,
-      date: date.data,
-    });
+    const session = await mongoose.startSession();
+
+    session.startTransaction();
+    try {
+      const totalInv = await TotalInventory.findOne({ vendor }, null, {
+        session,
+      });
+      if (!totalInv) {
+        return next(
+          new APIError(
+            'Inventory does not exist for this vendor. Please create it first',
+            400
+          )
+        );
+      }
+      if (load18 > totalInv.godownCoolJarStock) {
+        return next(
+          new APIError(
+            'You cannot load more cool jars than available in godown',
+            400
+          )
+        );
+      }
+      if (load20 > totalInv.godownBottleJarStock) {
+        return next(
+          new APIError(
+            'You cannot load more bottle jars than available in godown',
+            400
+          )
+        );
+      }
+      await DailyInventory.create(
+        [
+          {
+            vendor,
+            driver,
+            load18,
+            load20,
+            date: date.data,
+          },
+        ],
+        { session }
+      );
+      totalInv.godownCoolJarStock -= parseInt(load18, 10);
+      totalInv.godownBottleJarStock -= parseInt(load20, 10);
+      await totalInv.save();
+      await session.commitTransaction();
+    } catch (err) {
+      console.log(err);
+      await session.abortTransaction();
+      return next(new APIError('Failed to load daily inventory', 500));
+    }
     return successfulRequest(res, 201, {});
   }),
   getDailyInventory: catchAsync(async (req, res, next) => {
@@ -235,12 +301,24 @@ const inventoryController = {
     session.startTransaction();
 
     try {
-      const dailyInventory = await DailyInventory.findOne({
-        vendor,
-        driver,
-        date: date.data,
-        completed: false,
+      const totalInv = await TotalInventory.findOne({ vendor }, null, {
+        session,
       });
+      if (!totalInv) {
+        return next(
+          new APIError('Inventory does not exist for this vendor', 400)
+        );
+      }
+      const dailyInventory = await DailyInventory.findOne(
+        {
+          vendor,
+          driver,
+          date: date.data,
+          completed: false,
+        },
+        null,
+        { session }
+      );
       if (!dailyInventory) {
         return next(
           new APIError(
@@ -272,9 +350,23 @@ const inventoryController = {
       dailyInventory.missingEmpty20 =
         dailyInventory.expectedEmpty20 - unloadEmpty20;
       dailyInventory.completed = true;
+      totalInv.godownCoolJarStock +=
+        parseInt(dailyInventory.unloadReturned18, 10) +
+        parseInt(dailyInventory.unloadEmpty18, 10);
+      totalInv.godownBottleJarStock +=
+        parseInt(dailyInventory.unloadReturned20, 10) +
+        parseInt(dailyInventory.unloadEmpty20, 10);
+      totalInv.missingCoolJars +=
+        parseInt(dailyInventory.missingReturned18, 10) +
+        parseInt(dailyInventory.missingEmpty18, 10);
+      totalInv.missingBottleJars +=
+        parseInt(dailyInventory.missingReturned20, 10) +
+        parseInt(dailyInventory.missingEmpty20, 10);
       await dailyInventory.save();
+      await totalInv.save();
       await session.commitTransaction();
     } catch (err) {
+      console.log(err);
       return next(
         new APIError('Could not unload daily inventory. Please try again', 500)
       );
@@ -402,6 +494,15 @@ const inventoryController = {
         expectedEmpty18,
         expectedEmpty20,
       });
+    }
+    const dailyInventory = await DailyInventory.findOne({
+      vendor: mongoose.Types.ObjectId(vendor),
+      driver: mongoose.Types.ObjectId(driver),
+      date: date.data,
+      completed: false,
+    });
+    if (!dailyInventory) {
+      return next(new APIError('This inventory does not exist', 400));
     }
     const expected = await DailyInventory.aggregate([
       {
@@ -536,7 +637,21 @@ const inventoryController = {
       !expected[0].load ||
       expected[0].load.length === 0
     ) {
-      return next(new APIError('This inventory does not exist', 400));
+      const obj = {
+        expectedReturned18: dailyInventory.load18,
+        expectedReturned20: dailyInventory.load20,
+        expectedEmpty18: 0,
+        expectedEmpty20: 0,
+      };
+      await DailyInventory.updateOne(
+        { vendor, driver, date: date.data, completed: false },
+        {
+          ...obj,
+        }
+      );
+      return successfulRequest(res, 200, {
+        ...obj,
+      });
     }
     const sold18 = expected[0]?.totalSold?.filter(el => el._id === '18L');
     const expectedReturned18 =
