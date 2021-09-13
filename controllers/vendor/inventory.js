@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const TotalInventory = require('../../models/totalInventoryModel');
 const DailyInventory = require('../../models/dailyInventoryModel');
+const DailyJarAndPayment = require('../../models/dailyJarAndPaymentModel');
 const dateHelpers = require('../../helpers/date.helpers');
 const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
@@ -183,7 +184,7 @@ const inventoryController = {
     const existingInventory = await DailyInventory.findOne({
       vendor,
       driver,
-      date: date.data.toISOString(),
+      date: date.data,
     });
     if (existingInventory) {
       return next(
@@ -237,7 +238,7 @@ const inventoryController = {
       const dailyInventory = await DailyInventory.findOne({
         vendor,
         driver,
-        date: date.data.toISOString(),
+        date: date.data,
         completed: false,
       });
       if (!dailyInventory) {
@@ -279,6 +280,102 @@ const inventoryController = {
       );
     }
     return successfulRequest(res, 200, {});
+  }),
+  updateUnload: catchAsync(async (req, res, next) => {
+    const {
+      vendor,
+      driver,
+      unloadReturned18,
+      unloadReturned20,
+      unloadEmpty18,
+      unloadEmpty20,
+      date: stringDate,
+    } = req.body;
+    const date = dateHelpers.createDateFromString(stringDate);
+    if (!date.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const session = await mongoose.startSession();
+
+    session.startTransaction();
+
+    try {
+      const dailyInventory = await DailyInventory.findOne({
+        vendor,
+        driver,
+        date: date.data,
+        completed: true,
+      });
+      if (!dailyInventory) {
+        return next(
+          new APIError(
+            'Either daily inventory record does not exist or it has not been unloaded',
+            400
+          )
+        );
+      }
+      if (
+        Number.isNaN(parseInt(dailyInventory.expectedReturned18, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedReturned20, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedEmpty18, 10)) ||
+        Number.isNaN(parseInt(dailyInventory.expectedEmpty20, 10))
+      ) {
+        return next(
+          new APIError('Please get expected jars for this inventory first', 400)
+        );
+      }
+      dailyInventory.unloadReturned18 =
+        unloadReturned18 || dailyInventory.unloadReturned18;
+      dailyInventory.unloadReturned20 =
+        unloadReturned20 || dailyInventory.unloadReturned20;
+      dailyInventory.unloadEmpty18 =
+        unloadEmpty18 || dailyInventory.unloadEmpty18;
+      dailyInventory.unloadEmpty20 =
+        unloadEmpty20 || dailyInventory.unloadEmpty20;
+      dailyInventory.missingReturned18 =
+        dailyInventory.expectedReturned18 -
+        (unloadReturned18 || dailyInventory.unloadReturned18);
+      dailyInventory.missingReturned20 =
+        dailyInventory.expectedReturned20 -
+        (unloadReturned20 || dailyInventory.unloadReturned20);
+      dailyInventory.missingEmpty18 =
+        dailyInventory.expectedEmpty18 -
+        (unloadEmpty18 || dailyInventory.unloadEmpty18);
+      dailyInventory.missingEmpty20 =
+        dailyInventory.expectedEmpty20 -
+        (unloadEmpty20 || dailyInventory.unloadEmpty20);
+      dailyInventory.completed = true;
+      await dailyInventory.save();
+      await session.commitTransaction();
+    } catch (err) {
+      return next(
+        new APIError('Could not update daily inventory. Please try again', 500)
+      );
+    }
+    return successfulRequest(res, 200, { message: 'Daily inventory updated' });
+  }),
+  getDailyJarAndPayment: catchAsync(async (req, res, next) => {
+    const { id, vendor, driver, date: stringDate } = req.query;
+    if (id) {
+      const dailyJarAndPayment = await DailyJarAndPayment.findById(id);
+      if (!dailyJarAndPayment) {
+        return next(new APIError('Entry not found', 400));
+      }
+      return successfulRequest(res, 200, { dailyJarAndPayment });
+    }
+    const date = dateHelpers.createDateFromString(stringDate);
+    if (!date.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const dailyJarAndPayment = await DailyJarAndPayment.findOne({
+      vendor,
+      driver,
+      date: date.data,
+    });
+    if (!dailyJarAndPayment) {
+      return next(new APIError('Entry not found', 400));
+    }
+    return successfulRequest(res, 200, { dailyJarAndPayment });
   }),
   getExpectedUnload: catchAsync(async (req, res, next) => {
     const { vendor, driver, date: stringDate } = req.query;
@@ -475,14 +572,14 @@ const inventoryController = {
     }
     const dailyInv = await DailyInventory.findOne({
       vendor,
-      date: parsedDate.data.toISOString(),
+      date: parsedDate.data,
       driver,
     });
     if (!dailyInv) {
       return next(new APIError('Daily inventory does not exist', 400));
     }
     const obj = {
-      stage1: dailyInv.load18 || 0 + dailyInv.load20 || 0,
+      stage1: (dailyInv.load18 || 0) + (dailyInv.load20 || 0),
       stage2: {
         present:
           !Number.isNaN(parseInt(dailyInv.expectedReturned18, 10)) &&
@@ -508,6 +605,111 @@ const inventoryController = {
         obj.stage2.filled - obj.stage3.filled,
     };
     return successfulRequest(res, 200, obj);
+  }),
+  getDailyTransactionsByCustomer: catchAsync(async (req, res, next) => {
+    const { vendor, customer } = req.query;
+    const page = parseInt(req.query.page || 1, 10);
+    const skip = (page - 1) * 10;
+    const limit = 10;
+    const transactions = await DailyJarAndPayment.aggregate([
+      {
+        $match: {
+          vendor: mongoose.Types.ObjectId(vendor),
+        },
+      },
+      {
+        $sort: {
+          date: 1,
+        },
+      },
+      {
+        $unwind: {
+          path: '$transactions',
+          preserveNullAndEmptyArrays: false,
+        },
+      },
+      {
+        $match: {
+          'transactions.customer': mongoose.Types.ObjectId(customer),
+        },
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $project: {
+          transaction: '$transactions',
+          date: 1,
+        },
+      },
+    ]);
+    return successfulRequest(res, 200, {
+      transactions,
+      final: transactions.length < limit,
+    });
+  }),
+  updateDailyTransaction: catchAsync(async (req, res, next) => {
+    const { jarAndPayment, transaction, soldJars, emptyCollected } = req.body;
+    const dailyJarAndPayment = await DailyJarAndPayment.findById(jarAndPayment);
+    if (!dailyJarAndPayment) {
+      return next(new APIError('Entry not found', 400));
+    }
+    const dailyInventory = await DailyInventory.findOne({
+      vendor: dailyJarAndPayment.vendor,
+      driver: dailyJarAndPayment.driver,
+      date: dailyJarAndPayment.date,
+    });
+    if (!dailyInventory) {
+      return next(new APIError('Daily inventory not found', 400));
+    }
+    const transactionInd = dailyJarAndPayment.transactions.findIndex(
+      el => el._id.toString() === transaction
+    );
+    const actualTransaction = dailyJarAndPayment.transactions[transactionInd];
+    if (actualTransaction.length === 0) {
+      return next(new APIError('Transaction not found', 400));
+    }
+    if (soldJars) {
+      actualTransaction.soldJars = soldJars;
+    }
+    if (emptyCollected) {
+      actualTransaction.emptyCollected = emptyCollected;
+    }
+    dailyJarAndPayment.transactions[transactionInd] = actualTransaction;
+    await dailyJarAndPayment.save();
+    if (dailyInventory.completed) {
+      let sold18 = 0;
+      let sold20 = 0;
+      let empty18 = 0;
+      let empty20 = 0;
+      dailyJarAndPayment.transactions.forEach(el => {
+        if (el.product === '18L') {
+          sold18 += +(el.soldJars || 0);
+          empty18 += +(el.emptyCollected || 0);
+        }
+        if (el.product === '20L') {
+          sold20 += +(el.soldJars || 0);
+          empty20 += +(el.emptyCollected || 0);
+        }
+      });
+      dailyInventory.expectedReturned18 = dailyInventory.load18 - sold18;
+      dailyInventory.expectedReturned20 = dailyInventory.load20 - sold20;
+      dailyInventory.expectedEmpty18 = empty18;
+      dailyInventory.expectedEmpty20 = empty20;
+      dailyInventory.missingReturned18 =
+        dailyInventory.expectedReturned18 - dailyInventory.unloadReturned18;
+      dailyInventory.missingReturned20 =
+        dailyInventory.expectedReturned20 - dailyInventory.unloadReturned20;
+      dailyInventory.missingEmpty18 =
+        dailyInventory.expectedEmpty18 - dailyInventory.unloadEmpty18;
+      dailyInventory.missingEmpty20 =
+        dailyInventory.expectedEmpty20 - dailyInventory.unloadEmpty20;
+      await dailyInventory.save();
+    }
+    return successfulRequest(res, 200, { message: 'Transaction updated' });
   }),
 };
 

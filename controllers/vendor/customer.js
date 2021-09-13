@@ -504,6 +504,54 @@ const customerController = {
               },
             },
           ],
+          mobileNumbers: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                vendor: 1,
+                name: 1,
+                group: 1,
+                mobileNumber: 1,
+              },
+            },
+            {
+              $sort: {
+                name: -1,
+              },
+            },
+            {
+              $skip: skip,
+            },
+            {
+              $limit: limit,
+            },
+          ],
+          addresses: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                vendor: 1,
+                name: 1,
+                group: 1,
+                address: 1,
+              },
+            },
+            {
+              $sort: {
+                name: -1,
+              },
+            },
+            {
+              $skip: skip,
+            },
+            {
+              $limit: limit,
+            },
+          ],
         },
       },
     ]);
@@ -519,6 +567,14 @@ const customerController = {
         customers[0].drivers.filter(
           ele => ele._id.toString() === el._id.toString()
         )[0]?.driver?._id || undefined;
+      const mobileRes =
+        customers[0].mobileNumbers.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0]?.mobileNumber || undefined;
+      const addressRes =
+        customers[0].addresses.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0]?.address || undefined;
       if (!details) {
         details = {
           totalEmptyCollected: 0,
@@ -527,6 +583,8 @@ const customerController = {
       }
       details.group = groupRes;
       details.driver = driverRes;
+      details.mobileNumber = mobileRes;
+      details.address = addressRes;
       return {
         ...el,
         ...details,
@@ -827,6 +885,41 @@ const customerController = {
       customers: customersFinal,
       final: customers[0].deposits.length < limit,
     });
+  }),
+  getCustomerDeposits: catchAsync(async (req, res, next) => {
+    const { vendor } = req.query;
+    const customers = await Customer.find(
+      { vendor },
+      {
+        name: 1,
+      }
+    );
+    if (customers.length === 0) {
+      return next(
+        new APIError(
+          "You don't have any customers. Please add a customer first",
+          400
+        )
+      );
+    }
+    const customerIds = [];
+    customers.forEach(ele => {
+      customerIds.push(ele._id);
+    });
+    const customerProducts = await CustomerProduct.find(
+      {
+        customer: { $in: customerIds },
+      },
+      { deposit: 1, product: 1, customer: 1 }
+    );
+    const customersFinal = [];
+    customers.forEach(ele => {
+      const products = customerProducts.filter(
+        el => el.customer.toString() === ele._id.toString()
+      );
+      customersFinal.push({ _id: ele._id, name: ele.name, products });
+    });
+    return successfulRequest(res, 200, { customers: customersFinal });
   }),
 };
 

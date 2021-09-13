@@ -6,6 +6,7 @@ const TotalInventory = require('../../models/totalInventoryModel');
 const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
 const { successfulRequest } = require('../../utils/responses');
+const dateHelpers = require('../../helpers/date.helpers');
 
 const authController = {
   registerVendor: catchAsync(async (req, res, next) => {
@@ -517,6 +518,479 @@ const authController = {
     }
     home[0].vendorName = home[0].vendorName[0].fullVendorName;
     return successfulRequest(res, 200, { home: home[0] });
+  }),
+  getStockDetails: catchAsync(async (req, res, next) => {
+    const { vendor, date: stringDate } = req.query;
+    const date = dateHelpers.createDateFromString(
+      stringDate ||
+        `${new Date().getDate()}/${
+          new Date().getMonth() + 1
+        }/${new Date().getFullYear()}`
+    );
+    if (!date.success) {
+      return new APIError('Invalid date', 400);
+    }
+    const home = await Vendor.aggregate([
+      {
+        $facet: {
+          missingJars: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'dailyinventories',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$completed', true] },
+                          {
+                            $or: [
+                              { $ne: ['$missingReturned18', 0] },
+                              { $ne: ['$missingReturned20', 0] },
+                              { $ne: ['$missingEmpty18', 0] },
+                              { $ne: ['$missingEmpty20', 0] },
+                            ],
+                          },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      vendor: 1,
+                      missingReturned18: 1,
+                      missingReturned20: 1,
+                      missingEmpty18: 1,
+                      missingEmpty20: 1,
+                      completed: true,
+                    },
+                  },
+                ],
+                as: 'dailyinventories',
+              },
+            },
+            {
+              $unwind: {
+                path: '$dailyinventories',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                totalMissingReturned18: {
+                  $sum: '$dailyinventories.missingReturned18',
+                },
+                totalMissingReturned20: {
+                  $sum: '$dailyinventories.missingReturned20',
+                },
+                totalMissingEmpty18: {
+                  $sum: '$dailyinventories.missingEmpty18',
+                },
+                totalMissingEmpty20: {
+                  $sum: '$dailyinventories.missingEmpty20',
+                },
+              },
+            },
+          ],
+          loadedJars: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'dailyinventories',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$date', date.data] },
+                          { $eq: ['$completed', false] },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      vendor: 1,
+                      load18: 1,
+                      load20: 1,
+                    },
+                  },
+                ],
+                as: 'dailyinventories',
+              },
+            },
+            {
+              $unwind: {
+                path: '$dailyinventories',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                totalLoad18: {
+                  $sum: '$dailyinventories.load18',
+                },
+                totalLoad20: {
+                  $sum: '$dailyinventories.load20',
+                },
+              },
+            },
+          ],
+          unloadedJars: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'dailyinventories',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$date', date.data] },
+                          { $eq: ['$completed', true] },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      vendor: 1,
+                      unloadReturned18: 1,
+                      unloadReturned20: 1,
+                      unloadEmpty18: 1,
+                      unloadEmpty20: 1,
+                      completed: true,
+                    },
+                  },
+                ],
+                as: 'dailyinventories',
+              },
+            },
+            {
+              $unwind: {
+                path: '$dailyinventories',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                totalUnloadEmpty18: {
+                  $sum: '$dailyinventories.unloadEmpty18',
+                },
+                totalUnloadEmpty20: {
+                  $sum: '$dailyinventories.unloadEmpty20',
+                },
+              },
+            },
+          ],
+          soldAndEmptyJars: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'dailyjarandpayments',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ['$vendor', '$$vendor'] },
+                          { $eq: ['$date', date.data] },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      transactions: 1,
+                    },
+                  },
+                ],
+                as: 'jarandpayments',
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarandpayments',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $unwind: {
+                path: '$jarandpayments.transactions',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                totalSold: {
+                  $sum: '$jarandpayments.transactions.soldJars',
+                },
+                // totalEmpty: {
+                //   $sum: '$jarandpayments.transactions.emptyCollected',
+                // },
+              },
+            },
+          ],
+          totalJars: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'totalinventories',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$vendor', '$$vendor'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      vendor: 1,
+                      stock: 1,
+                      removedStock: 1,
+                    },
+                  },
+                ],
+                as: 'totalinventories',
+              },
+            },
+            {
+              $unwind: {
+                path: '$totalinventories',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $addFields: {
+                totalCoolJarStock: {
+                  $sum: '$totalinventories.stock.coolJarStock',
+                },
+                totalBottleJarStock: {
+                  $sum: '$totalinventories.stock.bottleJarStock',
+                },
+                totalRemovedCoolJarStock: {
+                  $sum: '$totalinventories.removedStock.coolJarStock',
+                },
+                totalRemovedBottleJarStock: {
+                  $sum: '$totalinventories.removedStock.bottleJarStock',
+                },
+              },
+            },
+            {
+              $project: {
+                totalCoolJarStock: 1,
+                totalBottleJarStock: 1,
+                totalRemovedCoolJarStock: 1,
+                totalRemovedBottleJarStock: 1,
+              },
+            },
+          ],
+          customerBalance: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'customers',
+                let: {
+                  vendor: '$_id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$vendor', '$$vendor'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                    },
+                  },
+                ],
+                as: 'customers',
+              },
+            },
+            {
+              $unwind: {
+                path: '$customers',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $lookup: {
+                from: 'customerproducts',
+                let: {
+                  customer: '$customers._id',
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ['$customer', '$$customer'],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      balanceJars: 1,
+                    },
+                  },
+                ],
+                as: 'customerproducts',
+              },
+            },
+            {
+              $unwind: {
+                path: '$customerproducts',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                balance: {
+                  $sum: '$customerproducts.balanceJars',
+                },
+              },
+            },
+          ],
+          vendorName: [
+            {
+              $match: {
+                _id: mongoose.Types.ObjectId(vendor),
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                fullVendorName: 1,
+              },
+            },
+          ],
+        },
+      },
+    ]);
+    if ((home[0].vendorName?.length || 0) <= 0) {
+      return next(new APIError('This vendor does not exist', 400));
+    }
+    if ((home[0].missingJars?.length || 0) <= 0) {
+      home[0].missingJars = 0;
+    }
+    if (home[0].totalJars !== 0) {
+      home[0].totalJars =
+        (home[0].totalJars[0]?.totalCoolJarStock || 0) +
+        (home[0].totalJars[0]?.totalBottleJarStock || 0) -
+        ((home[0].totalJars[0]?.totalRemovedCoolJarStock || 0) +
+          (home[0].totalJars[0]?.totalRemovedBottleJarStock || 0));
+    }
+    if (home[0].missingJars !== 0) {
+      home[0].missingJars =
+        (home[0].missingJars[0]?.totalMissingReturned18 || 0) +
+        (home[0].missingJars[0]?.totalMissingReturned20 || 0) +
+        (home[0].missingJars[0]?.totalMissingEmpty18 || 0) +
+        (home[0].missingJars[0]?.totalMissingEmpty20 || 0);
+      if (home[0].missingJars < 0) {
+        home[0].missingJars = 0;
+      }
+    }
+    home[0].totalSold = home[0]?.soldAndEmptyJars[0]?.totalSold || 0;
+    home[0].vendorName = home[0].vendorName[0].fullVendorName;
+    home[0].loadedJars =
+      (home[0].loadedJars[0]?.totalLoad18 || 0) +
+      (home[0].loadedJars[0]?.totalLoad20 || 0);
+    home[0].emptyJars =
+      (home[0].unloadedJars[0]?.totalUnloadEmpty18 || 0) +
+      (home[0].unloadedJars[0]?.totalUnloadEmpty20 || 0);
+    home[0].customersBalance = home[0].customerBalance[0]?.balance || 0;
+    delete home[0].totalEmpty;
+    delete home[0].customerBalance;
+    delete home[0].soldAndEmptyJars;
+    delete home[0].unloadedJars;
+    return successfulRequest(res, 200, { ...home[0] });
   }),
 };
 

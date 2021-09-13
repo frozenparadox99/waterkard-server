@@ -2,185 +2,202 @@ const Joi = require('joi');
 const mongoose = require('mongoose');
 const { failedRequestWithErrors } = require('../../utils/responses');
 
-const vendorValidators = {
-  registerVendor: (req, res, next) => {
+const driverPaymentValidators = {
+  addDriverPayment: (req, res, next) => {
     const schema = Joi.object({
-      coolJarStock: Joi.number()
-        .required()
+      product: Joi.string()
+        .valid('18L', '20L')
+        .when('from', { is: 'Customer', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Cool jar stock is required';
+                er.message = 'Product is required';
                 break;
               default:
-                er.message = 'Invalid input for cool jar stock';
+                er.message = 'Invalid input for product';
             }
           });
           return errors;
         }),
-      bottleJarStock: Joi.number()
+      mode: Joi.string()
         .required()
+        .valid('Cash', 'Online', 'Cheque')
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Bottle jar stock is required';
+                er.message = 'Mode of payment is required';
                 break;
               default:
-                er.message = 'Invalid input for bottle jar stock';
+                er.message = 'Invalid input for mode of payment';
             }
           });
           return errors;
         }),
-      defaultGroupName: Joi.string()
+      from: Joi.string()
+        .required()
+        .valid('Driver', 'Customer')
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Payer is required';
+                break;
+              default:
+                er.message = 'Invalid input for payer';
+            }
+          });
+          return errors;
+        }),
+      to: Joi.string()
+        .required()
+        .valid('Vendor', 'Driver')
+        .when('from', { is: 'Driver', then: Joi.invalid('Driver') })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Payee is required';
+                break;
+              default:
+                er.message = 'Invalid input for payee';
+            }
+          });
+          return errors;
+        }),
+      vendor: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Vendor is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid vendor. Please enter a valid vendor';
+                break;
+              default:
+                er.message = 'Invalid input for vendor';
+            }
+          });
+          return errors;
+        }),
+      customer: Joi.string()
+        .alphanum()
+        .when('from', { is: 'Customer', then: Joi.required() })
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Customer is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid customer. Please enter a valid customer';
+                break;
+              default:
+                er.message = 'Invalid input for customer';
+            }
+          });
+          return errors;
+        }),
+      driver: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Driver is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid driver. Please enter a valid driver';
+                break;
+              default:
+                er.message = 'Invalid input for driver';
+            }
+          });
+          return errors;
+        }),
+      date: Joi.string()
+        .required()
         .trim()
-        .required()
+        .pattern(new RegExp(/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/i))
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Default group name is required';
-                break;
-              default:
-                er.message = 'Invalid input for default group name';
-            }
-          });
-          return errors;
-        }),
-      firstDriverName: Joi.string()
-        .trim()
-        .required()
-        .error(errors => {
-          errors.forEach(er => {
-            switch (er.code) {
-              case 'any.required':
-                er.message = "Driver's name is required";
-                break;
-              default:
-                er.message = "Invalid input for driver's name";
-            }
-          });
-          return errors;
-        }),
-      firstDriverMobileNumber: Joi.string()
-        .pattern(new RegExp(/^\+91[0-9]{10}$/i))
-        .required()
-        .error(errors => {
-          errors.forEach(er => {
-            switch (er.code) {
-              case 'any.required':
-                er.message = "Driver's mobile number is required";
+                er.message = 'Date is required';
                 break;
               case 'string.pattern.base':
-                er.message =
-                  'Invalid mobile number. Please enter an Indian number';
+                er.message = 'Invalid date';
                 break;
               default:
-                er.message = "Invalid input for driver's mobile number";
+                er.message = 'Invalid input for date';
             }
           });
           return errors;
         }),
-      fullBusinessName: Joi.string()
+      amount: Joi.number()
         .required()
+        .min(1)
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Business name is required';
+                er.message = 'Amount is required';
                 break;
               default:
-                er.message = 'Invalid input for business name';
+                er.message = 'Invalid input for amount';
             }
           });
           return errors;
         }),
-      fullVendorName: Joi.string()
-        .required()
+      onlineAppForPayment: Joi.string()
+        .trim()
+        .when('mode', { is: 'Online', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Vendor name is required';
+                er.message = 'Please specify the app used for payment';
                 break;
               default:
-                er.message = 'Invalid input for vendor name';
+                er.message = 'Invalid input for online app for payment';
             }
           });
           return errors;
         }),
-      brandName: Joi.string()
-        .required()
+      chequeDetails: Joi.string()
+        .trim()
+        .when('mode', { is: 'Cheque', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Brand name is required';
+                er.message = 'Please specify cheque details';
                 break;
               default:
-                er.message = 'Invalid input for brand name';
-            }
-          });
-          return errors;
-        }),
-      mobileNumber: Joi.string()
-        .pattern(new RegExp(/^\+91[0-9]{10}$/i))
-        .required()
-        .error(errors => {
-          errors.forEach(er => {
-            switch (er.code) {
-              case 'any.required':
-                er.message = "Business' mobile number is required";
-                break;
-              case 'string.pattern.base':
-                er.message =
-                  'Invalid mobile number. Please enter an Indian number';
-                break;
-              default:
-                er.message = "Invalid input for business' mobile number";
-            }
-          });
-          return errors;
-        }),
-      country: Joi.string()
-        .required()
-        .error(errors => {
-          errors.forEach(er => {
-            switch (er.code) {
-              case 'any.required':
-                er.message = 'Country is required';
-                break;
-              default:
-                er.message = 'Invalid input for country';
-            }
-          });
-          return errors;
-        }),
-      state: Joi.string()
-        .required()
-        .error(errors => {
-          errors.forEach(er => {
-            switch (er.code) {
-              case 'any.required':
-                er.message = 'State is required';
-                break;
-              default:
-                er.message = 'Invalid input for state';
-            }
-          });
-          return errors;
-        }),
-      city: Joi.string()
-        .required()
-        .error(errors => {
-          errors.forEach(er => {
-            switch (er.code) {
-              case 'any.required':
-                er.message = 'City is required';
-                break;
-              default:
-                er.message = 'Invalid input for city';
+                er.message = 'Invalid input for cheque details';
             }
           });
           return errors;
@@ -198,41 +215,7 @@ const vendorValidators = {
     }
     return next();
   },
-  getVendor: (req, res, next) => {
-    const schema = Joi.object({
-      mobileNumber: Joi.string()
-        .pattern(new RegExp(/^\+91[0-9]{10}$/i))
-        .required()
-        .error(errors => {
-          errors.forEach(er => {
-            switch (er.code) {
-              case 'any.required':
-                er.message = 'Vendor mobile number is required';
-                break;
-              case 'string.pattern.base':
-                er.message =
-                  'Invalid mobile number. Please enter an Indian number';
-                break;
-              default:
-                er.message = 'Invalid input for vendor mobile number';
-            }
-          });
-          return errors;
-        }),
-    });
-    const result = schema.validate(req.query, {
-      abortEarly: false,
-    });
-    if (result?.error?.details?.length > 0) {
-      const errors = result.error.details.map(el => ({
-        path: el.path[0],
-        message: el.message,
-      }));
-      return failedRequestWithErrors(res, 400, errors);
-    }
-    return next();
-  },
-  getHomeScreen: (req, res, next) => {
+  getDriverPayments: (req, res, next) => {
     const schema = Joi.object({
       vendor: Joi.string()
         .alphanum()
@@ -258,17 +241,41 @@ const vendorValidators = {
           });
           return errors;
         }),
-      date: Joi.string()
-        .trim()
-        .pattern(new RegExp(/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/i))
+    });
+    const result = schema.validate(req.query, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
+  getDriverPaymentsByDriver: (req, res, next) => {
+    const schema = Joi.object({
+      driver: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
-              case 'string.pattern.base':
-                er.message = 'Invalid date';
+              case 'any.required':
+                er.message = 'Driver is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid driver. Please enter a valid driver';
                 break;
               default:
-                er.message = 'Invalid input for date';
+                er.message = 'Invalid input for driver';
             }
           });
           return errors;
@@ -288,4 +295,4 @@ const vendorValidators = {
   },
 };
 
-module.exports = vendorValidators;
+module.exports = driverPaymentValidators;

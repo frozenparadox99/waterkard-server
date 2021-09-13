@@ -73,7 +73,7 @@ const driverController = {
     const dailyInventory = await DailyInventory.findOne({
       vendor,
       driver,
-      date: date.data.toISOString(),
+      date: date.data,
     });
     if (!dailyInventory) {
       return next(
