@@ -11,11 +11,15 @@ const { successfulRequest } = require('../../utils/responses');
 
 const customerController = {
   getCustomers: catchAsync(async (req, res, next) => {
-    const { driver } = req.query;
+    const { driver, date } = req.query;
     const page = parseInt(req.query.page || 1, 10);
     const skip = (page - 1) * 20;
     const limit = 20;
     const driverDoc = await Driver.findById(driver, { group: 1 });
+    const parsedDate = dateHelpers.createDateFromString(date || '');
+    if (!parsedDate.success) {
+      return next(new APIError('Invalid date', 400));
+    }
     const customerMatchStage = {
       $match: {
         group: mongoose.Types.ObjectId(driverDoc.group),
@@ -50,6 +54,26 @@ const customerController = {
         },
       },
     };
+    const customerGroupStage = {};
+    if (date) {
+      customerGroupStage.status = {
+        $first: '$jarAndPayments.transactions.status',
+      };
+    }
+    const props = [{ name: 'date', val: parsedDate.data }];
+    if (date) {
+      props.forEach(el => {
+        if (el.val) {
+          jarAndPaymentsLookup.let = {
+            ...jarAndPaymentsLookup.let,
+            [el.name]: el.val,
+          };
+          jarAndPaymentsLookup.pipeline[0].$match.$expr.$and.push({
+            $eq: [`$${el.name}`, `$$${el.name}`],
+          });
+        }
+      });
+    }
     const customers = await Customer.aggregate([
       {
         $facet: {
@@ -100,6 +124,7 @@ const customerController = {
             {
               $group: {
                 _id: '$jarAndPayments.transactions.customer',
+                ...customerGroupStage,
                 totalEmptyCollected: {
                   $sum: '$jarAndPayments.transactions.emptyCollected',
                 },
@@ -271,6 +296,9 @@ const customerController = {
           totalSold: 0,
         };
       }
+      if (date && !details.status) {
+        details.status = 'pending';
+      }
       details.group = groupRes;
       details.mobileNumber = mobileRes;
       details.address = addressRes;
@@ -279,6 +307,12 @@ const customerController = {
         ...details,
       };
     });
+    const statusData = {
+      pending: 1,
+      skipped: 2,
+      completed: 3,
+    };
+    customersFinal.sort((a, b) => statusData[a.status] - statusData[b.status]);
     return successfulRequest(res, 200, {
       customers: customersFinal,
       final: customers[0].deposits.length < limit,
