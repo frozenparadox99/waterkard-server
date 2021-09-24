@@ -812,6 +812,7 @@ const authController = {
     //   (home[0].unloadedJars[0]?.totalUnloadEmpty20 || 0);
     home[0].emptyJars = home[0]?.soldAndEmptyJars[0]?.totalEmpty || 0;
     home[0].jarsInVehicles =
+      home[0].loadedJars &&
       home[0].loadedJars - home[0].soldToCustomers + home[0].emptyJars;
     home[0].missingJars =
       totalInventory.missingCoolJars + totalInventory.missingBottleJars;

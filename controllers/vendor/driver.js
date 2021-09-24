@@ -65,6 +65,7 @@ const driverController = {
       soldJars,
       emptyCollected,
       product,
+      status,
       date: stringDate,
     } = req.body;
     const date = dateHelpers.createDateFromString(stringDate);
@@ -131,7 +132,18 @@ const driverController = {
       date: date.data,
     });
     if (!dailyJarAndPayment) {
-      const transactions = [{ customer, soldJars, emptyCollected, product }];
+      const transactions = [];
+      if (status === 'skipped') {
+        transactions.push({ customer, status });
+      } else {
+        transactions.push({
+          customer,
+          soldJars,
+          emptyCollected,
+          product,
+          status,
+        });
+      }
       const jarAndPayment = await DailyJarAndPayment.create({
         vendor,
         driver,

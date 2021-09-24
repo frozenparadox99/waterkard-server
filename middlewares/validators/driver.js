@@ -174,11 +174,16 @@ const driverValidators = {
           });
           return errors;
         }),
+      status: Joi.string().required().valid('skipped', 'completed'),
       soldJars: Joi.number()
         .min(0)
+        .when('status', { is: 'completed', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
+              case 'any.required':
+                er.message = 'Sold jars are required';
+                break;
               default:
                 er.message = 'Invalid input for sold jars';
             }
@@ -187,9 +192,13 @@ const driverValidators = {
         }),
       emptyCollected: Joi.number()
         .min(0)
+        .when('status', { is: 'completed', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
+              case 'any.required':
+                er.message = 'Empty jars are required';
+                break;
               default:
                 er.message = 'Invalid input for empty jars collected';
             }
@@ -199,6 +208,7 @@ const driverValidators = {
       product: Joi.string()
         .required()
         .valid('18L', '20L')
+        .when('status', { is: 'completed', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
@@ -230,21 +240,21 @@ const driverValidators = {
           });
           return errors;
         }),
-    })
-      .or('soldJars', 'emptyCollected')
-      .error(errors => {
-        errors.forEach(er => {
-          switch (er.code) {
-            case 'object.missing':
-              er.message =
-                'Either sold jars or empty jars collected is required';
-              break;
-            default:
-              break;
-          }
-        });
-        return errors;
-      });
+    });
+    // .or('soldJars', 'emptyCollected')
+    // .error(errors => {
+    //   errors.forEach(er => {
+    //     switch (er.code) {
+    //       case 'object.missing':
+    //         er.message =
+    //           'Either sold jars or empty jars collected is required';
+    //         break;
+    //       default:
+    //         break;
+    //     }
+    //   });
+    //   return errors;
+    // });
     const result = schema.validate(req.body, {
       abortEarly: false,
     });
