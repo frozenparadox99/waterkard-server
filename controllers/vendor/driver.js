@@ -165,12 +165,14 @@ const driverController = {
       return successfulRequest(res, 201, { dailyJarAndPayment: jarAndPayment });
     }
     const exists = dailyJarAndPayment.transactions.filter(
-      el => el.customer.toString() === customer && el.product === product
+      el =>
+        el.customer.toString() === customer &&
+        (status === 'completed' ? el.product === product : true)
     );
     if (exists.length > 0) {
       return next(
         new APIError(
-          'Transaction for this customer and this product has been done for the specified date. Please edit or delete this entry',
+          'Transaction for this customer and this product has been done for the specified date. Please edit this entry if needed',
           400
         )
       );
