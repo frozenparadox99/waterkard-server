@@ -206,7 +206,6 @@ const driverValidators = {
           return errors;
         }),
       product: Joi.string()
-        .required()
         .valid('18L', '20L')
         .when('status', { is: 'completed', then: Joi.required() })
         .error(errors => {
