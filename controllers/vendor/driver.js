@@ -158,10 +158,12 @@ const driverController = {
         totalInventory.customerBottleJarBalance +=
           parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
       }
-      customerProduct.balanceJars +=
-        parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
-      await customerProduct.save();
-      await totalInventory.save();
+      if (status === 'completed') {
+        customerProduct.balanceJars +=
+          parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
+        await customerProduct.save();
+        await totalInventory.save();
+      }
       return successfulRequest(res, 201, { dailyJarAndPayment: jarAndPayment });
     }
     const exists = dailyJarAndPayment.transactions.filter(
@@ -184,8 +186,7 @@ const driverController = {
       product,
     });
     await dailyJarAndPayment.save();
-    customerProduct.balanceJars +=
-      parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
+
     if (product === '18L') {
       totalInventory.customerCoolJarBalance +=
         parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
@@ -194,8 +195,12 @@ const driverController = {
       totalInventory.customerBottleJarBalance +=
         parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
     }
-    await totalInventory.save();
-    await customerProduct.save();
+    if (status === 'completed') {
+      customerProduct.balanceJars +=
+        parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
+      await totalInventory.save();
+      await customerProduct.save();
+    }
     return successfulRequest(res, 200, { dailyJarAndPayment });
   }),
   getDriversForVendor: catchAsync(async (req, res, next) => {
