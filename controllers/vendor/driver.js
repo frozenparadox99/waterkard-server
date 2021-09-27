@@ -121,7 +121,7 @@ const driverController = {
       customer,
       product,
     });
-    if (!customerProduct) {
+    if (!customerProduct && status === 'completed') {
       return next(
         new APIError('Please add the product for this customer first', 400)
       );
