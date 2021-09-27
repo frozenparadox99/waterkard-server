@@ -345,6 +345,12 @@ const customerController = {
         },
       ],
     };
+    const customerGroupStage = {};
+    if (date) {
+      customerGroupStage.status = {
+        $first: '$jarAndPayments.transactions.status',
+      };
+    }
     const finalMatch = {
       $match: {
         $expr: {
@@ -402,11 +408,12 @@ const customerController = {
                 vendor: 1,
                 name: 1,
                 group: 1,
+                createdAt: -1,
               },
             },
             {
               $sort: {
-                name: -1,
+                createdAt: -1,
               },
             },
             {
@@ -439,7 +446,8 @@ const customerController = {
             },
             {
               $group: {
-                _id: '$jarAndPayments.transactions.customer',
+                _id: '$_id',
+                ...customerGroupStage,
                 totalEmptyCollected: {
                   $sum: '$jarAndPayments.transactions.emptyCollected',
                 },
@@ -654,6 +662,9 @@ const customerController = {
           totalSold: 0,
         };
       }
+      if (date && !details.status) {
+        details.status = 'pending';
+      }
       details.group = groupRes;
       details.driver = driverRes;
       details.mobileNumber = mobileRes;
@@ -663,6 +674,12 @@ const customerController = {
         ...details,
       };
     });
+    const statusData = {
+      pending: 1,
+      skipped: 2,
+      completed: 3,
+    };
+    customersFinal.sort((a, b) => statusData[a.status] - statusData[b.status]);
     return successfulRequest(res, 200, {
       customers: customersFinal,
       final: customers[0].deposits.length < limit,

@@ -787,6 +787,11 @@ const inventoryController = {
     if (actualTransaction.length === 0) {
       return next(new APIError('Transaction not found', 400));
     }
+    if (actualTransaction[0].status === 'skipped') {
+      return next(
+        new APIError('Transaction was skipped and cannot be edited', 400)
+      );
+    }
     if (soldJars) {
       actualTransaction.soldJars = soldJars;
     }

@@ -65,6 +65,7 @@ const driverController = {
       soldJars,
       emptyCollected,
       product,
+      status,
       date: stringDate,
     } = req.body;
     const date = dateHelpers.createDateFromString(stringDate);
@@ -131,7 +132,18 @@ const driverController = {
       date: date.data,
     });
     if (!dailyJarAndPayment) {
-      const transactions = [{ customer, soldJars, emptyCollected, product }];
+      const transactions = [];
+      if (status === 'skipped') {
+        transactions.push({ customer, status });
+      } else {
+        transactions.push({
+          customer,
+          soldJars,
+          emptyCollected,
+          product,
+          status,
+        });
+      }
       const jarAndPayment = await DailyJarAndPayment.create({
         vendor,
         driver,
@@ -153,12 +165,14 @@ const driverController = {
       return successfulRequest(res, 201, { dailyJarAndPayment: jarAndPayment });
     }
     const exists = dailyJarAndPayment.transactions.filter(
-      el => el.customer.toString() === customer && el.product === product
+      el =>
+        el.customer.toString() === customer &&
+        (status === 'completed' ? el.product === product : true)
     );
     if (exists.length > 0) {
       return next(
         new APIError(
-          'Transaction for this customer and this product has been done for the specified date. Please edit or delete this entry',
+          'Transaction for this customer and this product has been done for the specified date. Please edit this entry if needed',
           400
         )
       );

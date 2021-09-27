@@ -17,6 +17,12 @@ const dailyJarAndPaymentSchema = new mongoose.Schema(
     },
     transactions: [
       {
+        status: {
+          type: String,
+          enum: ['completed', 'skipped'],
+          required: true,
+          default: 'completed',
+        },
         customer: {
           type: mongoose.Types.ObjectId,
           ref: 'Customer',
