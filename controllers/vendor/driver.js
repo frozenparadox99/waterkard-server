@@ -179,14 +179,17 @@ const driverController = {
         )
       );
     }
-    dailyJarAndPayment.transactions.push({
-      customer,
-      soldJars,
-      emptyCollected,
-      product,
-    });
+    if (status === 'completed') {
+      dailyJarAndPayment.transactions.push({
+        customer,
+        soldJars,
+        emptyCollected,
+        product,
+      });
+    } else {
+      dailyJarAndPayment.transactions.push({ customer, status });
+    }
     await dailyJarAndPayment.save();
-
     if (product === '18L') {
       totalInventory.customerCoolJarBalance +=
         parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
