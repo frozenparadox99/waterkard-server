@@ -185,6 +185,7 @@ const driverController = {
         soldJars,
         emptyCollected,
         product,
+        status,
       });
     } else {
       dailyJarAndPayment.transactions.push({ customer, status });
