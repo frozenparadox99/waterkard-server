@@ -9,6 +9,7 @@ const paymentController = require('./payment');
 const controller = {
   registerVendor: authController.registerVendor,
   getVendor: authController.getVendor,
+  updateVendor: authController.updateVendor,
   getHomeScreen: authController.getHomeScreen,
   getStockDetails: authController.getStockDetails,
   registerCustomer: customerController.registerCustomer,
@@ -25,6 +26,7 @@ const controller = {
   getDriverPayments: paymentController.getDriverPayments,
   getDriverToVendorPayment: paymentController.getDriverToVendorPayment,
   getDriverPaymentsByDriver: paymentController.getDriverPaymentsByDriver,
+  getCustomerInvoice: paymentController.getCustomerInvoice,
   addGroup: groupController.addGroup,
   addDriver: driverController.addDriver,
   addTransaction: driverController.addTransaction,
