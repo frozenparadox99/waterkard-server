@@ -137,6 +137,16 @@ const authController = {
     }
     return successfulRequest(res, 200, { vendor });
   }),
+  getVendorById: catchAsync(async (req, res, next) => {
+    const { vendor: vendorId } = req.query;
+    const vendor = await Vendor.findOne(vendorId);
+    if (!vendor) {
+      return next(
+        new APIError('This vendor does not exist. Please register first', 400)
+      );
+    }
+    return successfulRequest(res, 200, { vendor });
+  }),
   updateVendor: catchAsync(async (req, res, next) => {
     const {
       vendor: vendorId,

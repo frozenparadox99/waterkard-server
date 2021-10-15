@@ -9,6 +9,7 @@ const paymentController = require('./payment');
 const controller = {
   registerVendor: authController.registerVendor,
   getVendor: authController.getVendor,
+  getVendorById: authController.getVendorById,
   updateVendor: authController.updateVendor,
   getHomeScreen: authController.getHomeScreen,
   getStockDetails: authController.getStockDetails,

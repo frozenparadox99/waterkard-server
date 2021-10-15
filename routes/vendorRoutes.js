@@ -15,6 +15,8 @@ router
   .route('/')
   .get(vendorValidators.getVendor, vendorController.getVendor)
   .patch(vendorValidators.updateVendor, vendorController.updateVendor);
+
+router.get('/id', vendorController.getVendorById);
 router.get(
   '/home',
   vendorValidators.getHomeScreen,
