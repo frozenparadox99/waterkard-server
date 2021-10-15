@@ -982,6 +982,7 @@ const customerController = {
       { vendor },
       {
         name: 1,
+        mobileNumber: 1,
       }
     );
     if (customers.length === 0) {
@@ -1003,13 +1004,32 @@ const customerController = {
       { deposit: 1, product: 1, customer: 1 }
     );
     const customersFinal = [];
+    let total18 = 0;
+    let total20 = 0;
     customers.forEach(ele => {
       const products = customerProducts.filter(
         el => el.customer.toString() === ele._id.toString()
       );
-      customersFinal.push({ _id: ele._id, name: ele.name, products });
+      customersFinal.push({
+        _id: ele._id,
+        name: ele.name,
+        mobileNumber: ele.mobileNumber,
+        products,
+      });
+      products.forEach(el => {
+        if (el.product === '18L') {
+          total18 += el.deposit;
+        }
+        if (el.product === '20L') {
+          total20 += el.deposit;
+        }
+      });
     });
-    return successfulRequest(res, 200, { customers: customersFinal });
+    return successfulRequest(res, 200, {
+      customers: customersFinal,
+      total18,
+      total20,
+    });
   }),
 };
 
