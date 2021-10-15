@@ -192,7 +192,11 @@ const paymentController = {
       },
       { rate: 1 }
     );
-    if ((!rate18 && !rate20) || (rate18 === null && rate20 === null)) {
+    if (
+      (!rate18 && !rate20) ||
+      (rate18 === null && rate20 === null) ||
+      (payments18.length === 0 && payments20.length === 0)
+    ) {
       return next(
         new APIError('This customer does not have any transactions', 400)
       );
