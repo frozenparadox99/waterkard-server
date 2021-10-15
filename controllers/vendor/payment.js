@@ -2,8 +2,10 @@ const mongoose = require('mongoose');
 const DriverPayment = require('../../models/driverPaymentModel');
 const CustomerPayment = require('../../models/customerPaymentModel');
 const CustomerProduct = require('../../models/customerProductModel');
+const Vendor = require('../../models/vendorModel');
 const Customer = require('../../models/customerModel');
 const Driver = require('../../models/driverModel');
+const DailyJarAndPayment = require('../../models/dailyJarAndPaymentModel');
 const dateHelpers = require('../../helpers/date.helpers');
 const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
@@ -102,9 +104,107 @@ const paymentController = {
     }
 
     const customerPayments = await CustomerPayment.find({ customer, vendor });
-    console.log(customerPayments);
-
+    if (!customerPayments) {
+      return next(new APIError('No payments found for this customer', 400));
+    }
     return successfulRequest(res, 200, { customerPayments });
+  }),
+  getCustomerInvoice: catchAsync(async (req, res, next) => {
+    const {
+      vendor: vendorId,
+      customer: customerId,
+      startDate: start,
+      endDate: end,
+    } = req.query;
+    const startDate = dateHelpers.createDateFromString(start);
+    const endDate = dateHelpers.createDateFromString(end);
+    if (!startDate.success || !endDate.success) {
+      return next(new APIError('Invalid date', 400));
+    }
+    const customer = await Customer.findById(customerId, {
+      name: 1,
+      mobileNumber: 1,
+      address: 1,
+      city: 1,
+      area: 1,
+      pincode: 1,
+    });
+    const vendor = await Vendor.findById(vendorId, {
+      fullVendorName: 1,
+      fullBusinessName: 1,
+      fullBrandName: 1,
+      brandName: 1,
+      mobileNumber: 1,
+      city: 1,
+      state: 1,
+    });
+    if (!customer) {
+      return next(new APIError('Customer does not exist', 400));
+    }
+    if (!vendor) {
+      return next(new APIError('Vendor does not exist', 400));
+    }
+    const transactions18 = await DailyJarAndPayment.find(
+      {
+        date: { $gte: startDate.data, $lte: endDate.data },
+        transactions: {
+          $elemMatch: {
+            customer: mongoose.Types.ObjectId(customerId),
+            status: 'completed',
+            product: '18L',
+          },
+        },
+      },
+      { date: 1, 'transactions.$': 1 }
+    );
+    const transactions20 = await DailyJarAndPayment.find(
+      {
+        date: { $gte: startDate.data, $lte: endDate.data },
+        transactions: {
+          $elemMatch: {
+            customer: mongoose.Types.ObjectId(customerId),
+            status: 'completed',
+            product: '20L',
+          },
+        },
+      },
+      { date: 1, 'transactions.$': 1 }
+    );
+    const payments18 = transactions18.map(el => ({
+      date: el.date,
+      transaction: el.transactions[0],
+    }));
+    const payments20 = transactions20.map(el => ({
+      date: el.date,
+      transaction: el.transactions[0],
+    }));
+    const rate18 = await CustomerProduct.findOne(
+      {
+        customer: customerId,
+        product: '18L',
+      },
+      { rate: 1 }
+    );
+    const rate20 = await CustomerProduct.findOne(
+      {
+        customer: customerId,
+        product: '20L',
+      },
+      { rate: 1 }
+    );
+    if ((!rate18 && !rate20) || (rate18 === null && rate20 === null)) {
+      return next(
+        new APIError('This customer does not have any transactions', 400)
+      );
+    }
+    return successfulRequest(res, 200, {
+      vendor,
+      customer,
+      payments18,
+      payments20,
+      rate18,
+      rate20,
+    });
   }),
   addDriverPayment: catchAsync(async (req, res, next) => {
     const {

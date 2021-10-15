@@ -137,6 +137,47 @@ const authController = {
     }
     return successfulRequest(res, 200, { vendor });
   }),
+  getVendorById: catchAsync(async (req, res, next) => {
+    const { vendor: vendorId } = req.query;
+    const vendor = await Vendor.findOne(vendorId);
+    if (!vendor) {
+      return next(
+        new APIError('This vendor does not exist. Please register first', 400)
+      );
+    }
+    return successfulRequest(res, 200, { vendor });
+  }),
+  updateVendor: catchAsync(async (req, res, next) => {
+    const {
+      vendor: vendorId,
+      fullBusinessName,
+      fullVendorName,
+      brandName,
+      mobileNumber,
+    } = req.body;
+    const obj = {
+      fullBusinessName,
+      fullVendorName,
+      brandName,
+      mobileNumber,
+    };
+    for (const x in obj) {
+      if (!obj[x] || obj[x] === null) {
+        delete obj[x];
+      }
+    }
+    const vendor = await Vendor.findByIdAndUpdate(
+      vendorId,
+      {
+        ...obj,
+      },
+      { new: true }
+    );
+    if (!vendor) {
+      return next(new APIError('Vendor does not exist', 400));
+    }
+    return successfulRequest(res, 200, { vendor });
+  }),
   getHomeScreen: catchAsync(async (req, res, next) => {
     const { vendor } = req.query;
     const home = await Vendor.aggregate([

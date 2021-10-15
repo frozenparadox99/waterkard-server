@@ -11,8 +11,12 @@ const inventoryValidators = require('../middlewares/validators/inventory');
 const customerPaymentValidators = require('../middlewares/validators/customerPayment');
 const driverPaymentValidators = require('../middlewares/validators/driverPayment');
 
-router.get('/', vendorValidators.getVendor, vendorController.getVendor);
+router
+  .route('/')
+  .get(vendorValidators.getVendor, vendorController.getVendor)
+  .patch(vendorValidators.updateVendor, vendorController.updateVendor);
 
+router.get('/id', vendorController.getVendorById);
 router.get(
   '/home',
   vendorValidators.getHomeScreen,
@@ -52,6 +56,12 @@ router
     customerPaymentValidators.addCustomerPayment,
     vendorController.addCustomerPayment
   );
+
+router.get(
+  '/customer/invoice',
+  customerPaymentValidators.getCustomerInvoice,
+  vendorController.getCustomerInvoice
+);
 
 router.post(
   '/customer/add-product',

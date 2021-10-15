@@ -232,6 +232,99 @@ const vendorValidators = {
     }
     return next();
   },
+  updateVendor: (req, res, next) => {
+    const schema = Joi.object({
+      vendor: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Vendor is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid vendor. Please enter a valid vendor';
+                break;
+              default:
+                er.message = 'Invalid input for vendor';
+            }
+          });
+          return errors;
+        }),
+      fullBusinessName: Joi.string().error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            case 'any.required':
+              er.message = 'Business name is required';
+              break;
+            default:
+              er.message = 'Invalid input for business name';
+          }
+        });
+        return errors;
+      }),
+      fullVendorName: Joi.string().error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            case 'any.required':
+              er.message = 'Vendor name is required';
+              break;
+            default:
+              er.message = 'Invalid input for vendor name';
+          }
+        });
+        return errors;
+      }),
+      brandName: Joi.string().error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            case 'any.required':
+              er.message = 'Brand name is required';
+              break;
+            default:
+              er.message = 'Invalid input for brand name';
+          }
+        });
+        return errors;
+      }),
+      mobileNumber: Joi.string()
+        .pattern(new RegExp(/^\+91[0-9]{10}$/i))
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = "Business' mobile number is required";
+                break;
+              case 'string.pattern.base':
+                er.message =
+                  'Invalid mobile number. Please enter an Indian number';
+                break;
+              default:
+                er.message = "Invalid input for business' mobile number";
+            }
+          });
+          return errors;
+        }),
+    }).or('fullBusinessName', 'fullVendorName', 'brandName', 'mobileNumber');
+    const result = schema.validate(req.body, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
   getHomeScreen: (req, res, next) => {
     const schema = Joi.object({
       vendor: Joi.string()
