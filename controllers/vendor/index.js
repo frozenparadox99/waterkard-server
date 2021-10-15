@@ -18,6 +18,7 @@ const controller = {
   updateCustomersGroups: customerController.updateCustomersGroups,
   addCustomerProduct: customerController.addCustomerProduct,
   getCustomers: customerController.getCustomers,
+  getCustomer: customerController.getCustomer,
   getCustomersByOrderDate: customerController.getCustomersByDate,
   getCustomerProducts: customerController.getCustomerProducts,
   getCustomerDeposits: customerController.getCustomerDeposits,

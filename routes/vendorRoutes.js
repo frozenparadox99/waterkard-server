@@ -41,6 +41,8 @@ router
   .patch(vendorController.updateCustomer)
   .get(customerValidators.getCustomers, vendorController.getCustomers);
 
+router.get('/customer/id', vendorController.getCustomer);
+
 router.patch('/customer/groups', vendorController.updateCustomersGroups);
 
 router.get(

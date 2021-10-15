@@ -121,6 +121,20 @@ const customerController = {
 
     return successfulRequest(res, 201, { customer: customer[0] });
   }),
+  getCustomer: catchAsync(async (req, res, next) => {
+    const { customer: customerId, vendor } = req.query;
+    if (
+      !mongoose.isValidObjectId(customerId) ||
+      !mongoose.isValidObjectId(vendor)
+    ) {
+      return next(new APIError('Invalid customer or vendor', 400));
+    }
+    const customer = await Customer.findOne({ _id: customerId, vendor });
+    if (!customer) {
+      return next(new APIError('Customer does not exist', 400));
+    }
+    return successfulRequest(res, 200, { customer });
+  }),
   updateCustomer: catchAsync(async (req, res, next) => {
     const {
       id,
