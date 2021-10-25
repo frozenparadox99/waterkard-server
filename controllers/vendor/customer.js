@@ -997,11 +997,12 @@ const customerController = {
     if (driverId) {
       driver = await Driver.findById(driverId, { group: 1 });
     }
-    if (!driver) {
+    if (!driver && driverId) {
       return next(new APIError('Driver not found', 400));
     }
+    const filter = driver ? { vendor, group: driver.group } : { vendor };
     const customers = await Customer.find(
-      { vendor, group: driver.group },
+      { ...filter },
       {
         name: 1,
         mobileNumber: 1,
