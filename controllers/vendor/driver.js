@@ -228,6 +228,16 @@ const driverController = {
     }
     return successfulRequest(res, 201, { driver });
   }),
+  getDriverData: catchAsync(async (req, res, next) => {
+    const { driverId } = req.query;
+    const driver = await Driver.findById(driverId).populate({
+      populate: 'groups',
+    });
+    if (!driver) {
+      return next(new APIError('No driver found for the given Id', 400));
+    }
+    return successfulRequest(res, 201, { driver });
+  }),
 };
 
 module.exports = driverController;

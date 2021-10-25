@@ -97,7 +97,7 @@ router
   .get(vendorController.getDriverDetails);
 router.get('/driver/all', vendorController.getDriversForVendor);
 
-router.get('/driver/getDriverDetails', vendorController.getDriverDetails);
+router.get('/driver/getDriverDetails', vendorController.getDriverData);
 
 router.post(
   '/driver/add-transaction',

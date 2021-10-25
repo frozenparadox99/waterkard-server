@@ -43,6 +43,7 @@ const controller = {
   getGroupDetails: groupController.getGroupDetails,
   getDriversForVendor: driverController.getDriversForVendor,
   getDriverDetails: driverController.getDriverDetails,
+  getDriverData: driverController.getDriverData,
   getAllOrders: orderController.getAllOrders,
   getTotalInventory: inventoryController.getTotalInventory,
   getDailyInventory: inventoryController.getDailyInventory,
