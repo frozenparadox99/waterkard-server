@@ -11,6 +11,7 @@ const controller = {
   getVendor: authController.getVendor,
   getVendorById: authController.getVendorById,
   updateVendor: authController.updateVendor,
+  updateDriver: authController.updateDriver,
   getHomeScreen: authController.getHomeScreen,
   getStockDetails: authController.getStockDetails,
   registerCustomer: customerController.registerCustomer,

@@ -178,6 +178,29 @@ const authController = {
     }
     return successfulRequest(res, 200, { vendor });
   }),
+  updateDriver: catchAsync(async (req, res, next) => {
+    const { driver: driverId, name, password } = req.body;
+    const obj = {
+      name,
+      password,
+    };
+    for (const x in obj) {
+      if (!obj[x] || obj[x] === null) {
+        delete obj[x];
+      }
+    }
+    const driver = await Driver.findByIdAndUpdate(
+      driverId,
+      {
+        ...obj,
+      },
+      { new: true }
+    );
+    if (!driver) {
+      return next(new APIError('Driver does not exist', 400));
+    }
+    return successfulRequest(res, 200, { driver });
+  }),
   getHomeScreen: catchAsync(async (req, res, next) => {
     const { vendor } = req.query;
     const home = await Vendor.aggregate([

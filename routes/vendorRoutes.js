@@ -96,6 +96,7 @@ router
   .post('/driver', driverValidators.addDriver, vendorController.addDriver)
   .get(vendorController.getDriverDetails);
 router.get('/driver/all', vendorController.getDriversForVendor);
+router.patch('/driver', vendorController.updateDriver);
 
 router.get('/driver/getDriverDetails', vendorController.getDriverData);
 
