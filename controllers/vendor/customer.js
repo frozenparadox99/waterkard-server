@@ -3,6 +3,7 @@ const Customer = require('../../models/customerModel');
 const CustomerProduct = require('../../models/customerProductModel');
 const Order = require('../../models/orderModel');
 const TotalInventory = require('../../models/totalInventoryModel');
+const Driver = require('../../models/driverModel');
 const dateHelpers = require('../../helpers/date.helpers');
 const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
@@ -991,9 +992,16 @@ const customerController = {
     });
   }),
   getCustomerDeposits: catchAsync(async (req, res, next) => {
-    const { vendor } = req.query;
+    const { vendor, driver: driverId } = req.query;
+    let driver = null;
+    if (driverId) {
+      driver = await Driver.findById(driverId, { group: 1 });
+    }
+    if (!driver) {
+      return next(new APIError('Driver not found', 400));
+    }
     const customers = await Customer.find(
-      { vendor },
+      { vendor, group: driver.group },
       {
         name: 1,
         mobileNumber: 1,

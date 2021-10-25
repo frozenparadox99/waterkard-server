@@ -739,6 +739,26 @@ const customerValidators = {
   },
   getCustomerDeposits: (req, res, next) => {
     const schema = Joi.object({
+      driver: Joi.string()
+        .alphanum()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.invalid':
+                er.message = 'Invalid driver. Please enter a valid driver';
+                break;
+              default:
+                er.message = 'Invalid input for driver';
+            }
+          });
+          return errors;
+        }),
       vendor: Joi.string()
         .alphanum()
         .required()
