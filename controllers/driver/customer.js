@@ -12,9 +12,6 @@ const { successfulRequest } = require('../../utils/responses');
 const customerController = {
   getCustomers: catchAsync(async (req, res, next) => {
     const { driver, date } = req.query;
-    const page = parseInt(req.query.page || 1, 10);
-    const skip = (page - 1) * 20;
-    const limit = 20;
     const driverDoc = await Driver.findById(driver, { group: 1 });
     const parsedDate = dateHelpers.createDateFromString(date || '');
     if (!parsedDate.success) {
@@ -90,14 +87,8 @@ const customerController = {
             },
             {
               $sort: {
-                name: -1,
+                createdAt: -1,
               },
-            },
-            {
-              $skip: skip,
-            },
-            {
-              $limit: limit,
             },
             {
               $lookup: {
@@ -182,19 +173,70 @@ const customerController = {
               $project: {
                 vendor: 1,
                 name: 1,
+                balancePayment: 1,
                 _id: 1,
               },
             },
             {
               $sort: {
-                name: -1,
+                createdAt: -1,
               },
             },
             {
-              $skip: skip,
+              $group: {
+                _id: '$_id',
+                name: { $first: '$name' },
+                balancePayment: { $first: '$balancePayment' },
+              },
+            },
+          ],
+          mobileNumbers: [
+            {
+              ...customerMatchStage,
             },
             {
-              $limit: limit,
+              $project: {
+                vendor: 1,
+                name: 1,
+                group: 1,
+                mobileNumber: 1,
+              },
+            },
+            {
+              $sort: {
+                createdAt: -1,
+              },
+            },
+          ],
+          addresses: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                vendor: 1,
+                name: 1,
+                group: 1,
+                address: 1,
+              },
+            },
+            {
+              $sort: {
+                createdAt: -1,
+              },
+            },
+          ],
+          balance: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                vendor: 1,
+                name: 1,
+                balancePayment: 1,
+                _id: 1,
+              },
             },
             {
               $lookup: {
@@ -213,62 +255,11 @@ const customerController = {
             {
               $group: {
                 _id: '$_id',
-                totalDeposit: {
-                  $sum: '$customerProducts.deposit',
-                },
                 totalBalance: {
                   $sum: '$customerProducts.balanceJars',
                 },
                 name: { $first: '$name' },
               },
-            },
-          ],
-          mobileNumbers: [
-            {
-              ...customerMatchStage,
-            },
-            {
-              $project: {
-                vendor: 1,
-                name: 1,
-                group: 1,
-                mobileNumber: 1,
-              },
-            },
-            {
-              $sort: {
-                name: -1,
-              },
-            },
-            {
-              $skip: skip,
-            },
-            {
-              $limit: limit,
-            },
-          ],
-          addresses: [
-            {
-              ...customerMatchStage,
-            },
-            {
-              $project: {
-                vendor: 1,
-                name: 1,
-                group: 1,
-                address: 1,
-              },
-            },
-            {
-              $sort: {
-                name: -1,
-              },
-            },
-            {
-              $skip: skip,
-            },
-            {
-              $limit: limit,
             },
           ],
         },
@@ -290,6 +281,10 @@ const customerController = {
         customers[0].addresses.filter(
           ele => ele._id.toString() === el._id.toString()
         )[0]?.address || undefined;
+      const balanceRes =
+        customers[0].balance.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0].totalBalance || undefined;
       if (!details) {
         details = {
           totalEmptyCollected: 0,
@@ -302,6 +297,7 @@ const customerController = {
       details.group = groupRes;
       details.mobileNumber = mobileRes;
       details.address = addressRes;
+      details.totalBalance = balanceRes;
       return {
         ...el,
         ...details,
@@ -315,7 +311,6 @@ const customerController = {
     customersFinal.sort((a, b) => statusData[a.status] - statusData[b.status]);
     return successfulRequest(res, 200, {
       customers: customersFinal,
-      final: customers[0].deposits.length < limit,
     });
   }),
   getCustomerDetails: catchAsync(async (req, res, next) => {
