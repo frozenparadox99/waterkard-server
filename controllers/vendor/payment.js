@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const DriverPayment = require('../../models/driverPaymentModel');
+const Payment = require('../../models/paymentModel');
 const CustomerPayment = require('../../models/customerPaymentModel');
 const CustomerProduct = require('../../models/customerProductModel');
 const Vendor = require('../../models/vendorModel');
@@ -14,24 +14,27 @@ const { successfulRequest } = require('../../utils/responses');
 const paymentController = {
   addCustomerPayment: catchAsync(async (req, res, next) => {
     const {
-      customer,
-      mode,
       vendor,
-      date,
+      customer,
+      from,
+      to,
+      product,
+      mode,
       amount,
       chequeDetails,
       onlineAppForPayment,
-      product,
+      date: stringDate,
     } = req.body;
 
-    const parsedDate = dateHelpers.createDateFromString(date);
+    const parsedDate = dateHelpers.createDateFromString(stringDate);
     if (!parsedDate.success) {
       return next(new APIError('Invalid date', 400));
     }
-
+    if (from !== 'Customer' || to !== 'Vendor') {
+      return next(new APIError('Invalid input', 400));
+    }
     // 1) Check if customer belongs to vendor
     const customerInDb = await Customer.findOne({ _id: customer, vendor });
-    console.log(customerInDb);
 
     if (!customerInDb) {
       return next(new APIError('This customer does not exist', 400));
@@ -43,17 +46,19 @@ const paymentController = {
 
     try {
       // 4) Save payment in the Customer Payment collection
-      const customerPayment = await CustomerPayment.create(
+      const customerPayment = await Payment.create(
         [
           {
-            customer,
-            mode,
             vendor,
-            date: parsedDate.data,
+            customer,
+            from,
+            to,
+            product,
+            mode,
             amount,
             chequeDetails,
             onlineAppForPayment,
-            product,
+            date: parsedDate.data,
           },
         ],
         { session }
@@ -63,13 +68,13 @@ const paymentController = {
 
       const custProd = await CustomerProduct.findOne(
         { customer, product },
-        'deposit customer product rate balanceJars dispenser',
+        'deposit customer product rate balanceJars dispenser balancePayment',
         { session }
       );
-      console.log(custProd);
 
-      custProd.deposit += parseInt(amount, 10);
-
+      custProd.balancePayment -= +amount;
+      customerInDb.balancePayment -= +amount;
+      await customerInDb.save();
       await custProd.save();
 
       // commit the changes if everything was successful
@@ -93,7 +98,7 @@ const paymentController = {
 
     return successfulRequest(res, 201, {});
   }),
-  getCustomerPayment: catchAsync(async (req, res, next) => {
+  getCustomerPayments: catchAsync(async (req, res, next) => {
     const { customer, vendor } = req.query;
 
     if (!vendor) {
@@ -103,11 +108,47 @@ const paymentController = {
       return next(new APIError('Invalid customer', 400));
     }
 
-    const customerPayments = await CustomerPayment.find({ customer, vendor });
+    const customerPayments = await Payment.find({
+      from: 'Customer',
+      customer,
+      vendor,
+    });
     if (!customerPayments) {
       return next(new APIError('No payments found for this customer', 400));
     }
     return successfulRequest(res, 200, { customerPayments });
+  }),
+  getAllCustomerPayments: catchAsync(async (req, res, next) => {
+    const { vendor, driver: driverId } = req.query;
+    let driver = null;
+    if (driverId) {
+      driver = await Driver.findById(driverId, { group: 1 });
+    }
+    if (!driver && driverId) {
+      return next(new APIError('Driver not found', 400));
+    }
+    const filter = driver ? { vendor, group: driver.group } : { vendor };
+    const customers = await Customer.find(
+      { ...filter },
+      {
+        name: 1,
+        mobileNumber: 1,
+        balancePayment: 1,
+      }
+    );
+    if (customers.length === 0) {
+      return next(
+        new APIError(
+          "You don't have any customers. Please add a customer first",
+          400
+        )
+      );
+    }
+    const totalBalance = customers.reduce((a, c) => a + c.balancePayment, 0);
+    return successfulRequest(res, 200, {
+      customers,
+      totalBalance,
+    });
   }),
   getCustomerInvoice: catchAsync(async (req, res, next) => {
     const {
@@ -210,7 +251,7 @@ const paymentController = {
       rate20,
     });
   }),
-  addDriverPayment: catchAsync(async (req, res, next) => {
+  addPayment: catchAsync(async (req, res, next) => {
     const {
       vendor,
       driver,
@@ -228,11 +269,15 @@ const paymentController = {
     if (!date.success) {
       return next(new APIError('Invalid date', 400));
     }
+    const currentCustomer = await Customer.findById(customer);
+    if (!currentCustomer) {
+      return next(new APIError('Customer does not exist', 400));
+    }
     const session = await mongoose.startSession();
-    let driverPayment;
+    let payment;
     session.startTransaction();
     try {
-      driverPayment = await DriverPayment.create(
+      payment = await Payment.create(
         [
           {
             vendor,
@@ -256,7 +301,7 @@ const paymentController = {
             customer,
             product,
           },
-          { deposit: 1 },
+          { balancePayment: 1 },
           { session }
         );
         if (!customerProduct) {
@@ -264,7 +309,9 @@ const paymentController = {
             'Please add this product for the specified customer first'
           );
         }
-        customerProduct.deposit += +amount;
+        customerProduct.balancePayment -= +amount;
+        currentCustomer.balancePayment -= +amount;
+        await currentCustomer.save();
         await customerProduct.save();
       }
       await session.commitTransaction();
@@ -274,7 +321,7 @@ const paymentController = {
     } finally {
       session.endSession();
     }
-    return successfulRequest(res, 201, { driverPayment });
+    return successfulRequest(res, 201, { payment });
   }),
   getDriverToVendorPayment: catchAsync(async (req, res, next) => {
     const { driver } = req.query;
@@ -283,11 +330,11 @@ const paymentController = {
       return next(new APIError('Invalid driver', 400));
     }
 
-    const driverPayments = await DriverPayment.find({
+    const driverPayments = await Payment.find({
       driver,
       from: 'Driver',
+      to: 'Vendor',
     });
-    console.log(driverPayments);
 
     return successfulRequest(res, 200, { driverPayments });
   }),
@@ -310,7 +357,7 @@ const paymentController = {
             },
             {
               $lookup: {
-                from: 'driverpayments',
+                from: 'payments',
                 let: {
                   vendor: '$vendor',
                   driver: '$_id',
@@ -373,7 +420,7 @@ const paymentController = {
             },
             {
               $lookup: {
-                from: 'driverpayments',
+                from: 'payments',
                 let: {
                   vendor: '$vendor',
                   driver: '$_id',
@@ -436,7 +483,7 @@ const paymentController = {
             },
             {
               $lookup: {
-                from: 'driverpayments',
+                from: 'payments',
                 let: {
                   vendor: '$vendor',
                   driver: '$_id',
@@ -536,7 +583,7 @@ const paymentController = {
             },
             {
               $lookup: {
-                from: 'driverpayments',
+                from: 'payments',
                 let: {
                   vendor: '$vendor',
                   driver: '$_id',
@@ -599,7 +646,7 @@ const paymentController = {
             },
             {
               $lookup: {
-                from: 'driverpayments',
+                from: 'payments',
                 let: {
                   vendor: '$vendor',
                   driver: '$_id',
@@ -662,7 +709,7 @@ const paymentController = {
             },
             {
               $lookup: {
-                from: 'driverpayments',
+                from: 'payments',
                 let: {
                   vendor: '$vendor',
                   driver: '$_id',

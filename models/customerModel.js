@@ -40,6 +40,10 @@ const customerSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    balancePayment: {
+      type: Number,
+      default: 0,
+    },
     group: {
       type: mongoose.Types.ObjectId,
       ref: 'Group',

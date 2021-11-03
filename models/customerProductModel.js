@@ -21,6 +21,10 @@ const customerProductSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    balancePayment: {
+      type: Number,
+      default: 0,
+    },
     deposit: {
       type: Number,
       required: true,

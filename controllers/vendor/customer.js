@@ -27,6 +27,7 @@ const customerController = {
       dispenser,
       deposit,
       rate,
+      balancePayment,
     } = req.body;
 
     let customer;
@@ -60,6 +61,7 @@ const customerController = {
             pincode,
             group,
             vendor,
+            balancePayment,
           },
         ],
         { session }
@@ -74,6 +76,7 @@ const customerController = {
             deposit,
             rate,
             customer: customer[0]._id,
+            balancePayment,
           },
         ],
         { session }
@@ -202,8 +205,15 @@ const customerController = {
     return next(new APIError("Customers' groups not updated", 500));
   }),
   addCustomerProduct: catchAsync(async (req, res, next) => {
-    const { product, balanceJars, dispenser, deposit, rate, customer } =
-      req.body;
+    const {
+      product,
+      balanceJars,
+      dispenser,
+      deposit,
+      rate,
+      customer,
+      balancePayment,
+    } = req.body;
     const cust = await Customer.findById(customer);
     if (!cust) {
       return next(new APIError('Customer does not exist', 400));
@@ -268,6 +278,7 @@ const customerController = {
             deposit,
             rate,
             customer,
+            balancePayment,
           },
         ],
         { session }
@@ -294,6 +305,8 @@ const customerController = {
         totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
         totalInv.godownBottleJarStock -= parseInt(balanceJars, 10);
       }
+      cust.balancePayment += balancePayment;
+      await cust.save();
       await totalInv.save();
       // commit the changes if everything was successful
       await session.commitTransaction();
@@ -423,7 +436,8 @@ const customerController = {
                 vendor: 1,
                 name: 1,
                 group: 1,
-                createdAt: -1,
+                createdAt: 1,
+                balancePayment: 1,
               },
             },
             {
@@ -470,6 +484,7 @@ const customerController = {
                   $sum: '$jarAndPayments.transactions.soldJars',
                 },
                 name: { $first: '$name' },
+                balancePayment: { $first: '$balancePayment' },
               },
             },
           ],

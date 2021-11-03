@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const driverPaymentSchema = new mongoose.Schema(
+const paymentSchema = new mongoose.Schema(
   {
     vendor: {
       type: mongoose.Types.ObjectId,
@@ -56,6 +56,6 @@ const driverPaymentSchema = new mongoose.Schema(
   }
 );
 
-const DriverPayment = mongoose.model('DriverPayment', driverPaymentSchema);
+const Payment = mongoose.model('Payment', paymentSchema);
 
-module.exports = DriverPayment;
+module.exports = Payment;

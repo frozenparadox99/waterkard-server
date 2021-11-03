@@ -53,11 +53,17 @@ router.get(
 
 router
   .route('/customer/payment')
-  .get(vendorController.getCustomerPayment)
+  .get(vendorController.getCustomerPayments)
   .post(
     customerPaymentValidators.addCustomerPayment,
     vendorController.addCustomerPayment
   );
+
+router.get(
+  '/customer/all-payments',
+  customerPaymentValidators.getAllCustomerPayments,
+  vendorController.getAllCustomerPayments
+);
 
 router.get(
   '/customer/invoice',
@@ -109,7 +115,7 @@ router.post(
 router.post(
   '/driver/payment',
   driverPaymentValidators.addDriverPayment,
-  vendorController.addDriverPayment
+  vendorController.addPayment
 );
 
 router.get(
