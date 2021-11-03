@@ -105,10 +105,7 @@ const driverController = {
         new APIError('Driver does not exist. Please add the driver first', 400)
       );
     }
-    const currentCustomer = await Customer.findOne({
-      vendor,
-      group: currentDriver.group,
-    });
+    const currentCustomer = await Customer.findById(customer);
     if (!currentCustomer) {
       return next(
         new APIError(
