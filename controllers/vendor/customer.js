@@ -678,7 +678,7 @@ const customerController = {
       const balanceRes =
         customers[0].balance.filter(
           ele => ele._id.toString() === el._id.toString()
-        )[0] || undefined;
+        )[0].totalBalance || undefined;
       if (!details) {
         details = {
           totalEmptyCollected: 0,
