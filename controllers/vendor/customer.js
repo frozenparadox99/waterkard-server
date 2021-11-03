@@ -343,9 +343,6 @@ const customerController = {
   }),
   getCustomers: catchAsync(async (req, res, next) => {
     const { vendor, group, product, date, typeOfCustomer } = req.query;
-    const page = parseInt(req.query.page || 1, 10);
-    const skip = (page - 1) * 20;
-    const limit = 20;
     const parsedDate = dateHelpers.createDateFromString(date || '');
     if (!parsedDate.success) {
       return next(new APIError('Invalid date', 400));
@@ -437,19 +434,12 @@ const customerController = {
                 name: 1,
                 group: 1,
                 createdAt: 1,
-                balancePayment: 1,
               },
             },
             {
               $sort: {
                 createdAt: -1,
               },
-            },
-            {
-              $skip: skip,
-            },
-            {
-              $limit: limit,
             },
             {
               $lookup: {
@@ -484,7 +474,6 @@ const customerController = {
                   $sum: '$jarAndPayments.transactions.soldJars',
                 },
                 name: { $first: '$name' },
-                balancePayment: { $first: '$balancePayment' },
               },
             },
           ],
@@ -574,44 +563,20 @@ const customerController = {
               $project: {
                 vendor: 1,
                 name: 1,
+                balancePayment: 1,
                 _id: 1,
               },
             },
             {
               $sort: {
-                name: -1,
-              },
-            },
-            {
-              $skip: skip,
-            },
-            {
-              $limit: limit,
-            },
-            {
-              $lookup: {
-                from: 'customerproducts',
-                localField: '_id',
-                foreignField: 'customer',
-                as: 'customerProducts',
-              },
-            },
-            {
-              $unwind: {
-                path: '$customerProducts',
-                preserveNullAndEmptyArrays: false,
+                createdAt: -1,
               },
             },
             {
               $group: {
                 _id: '$_id',
-                totalDeposit: {
-                  $sum: '$customerProducts.deposit',
-                },
-                totalBalance: {
-                  $sum: '$customerProducts.balanceJars',
-                },
                 name: { $first: '$name' },
+                balancePayment: { $first: '$balancePayment' },
               },
             },
           ],
@@ -632,12 +597,6 @@ const customerController = {
                 name: -1,
               },
             },
-            {
-              $skip: skip,
-            },
-            {
-              $limit: limit,
-            },
           ],
           addresses: [
             {
@@ -655,12 +614,6 @@ const customerController = {
               $sort: {
                 name: -1,
               },
-            },
-            {
-              $skip: skip,
-            },
-            {
-              $limit: limit,
             },
           ],
         },
@@ -712,7 +665,6 @@ const customerController = {
     customersFinal.sort((a, b) => statusData[a.status] - statusData[b.status]);
     return successfulRequest(res, 200, {
       customers: customersFinal,
-      final: customers[0].deposits.length < limit,
     });
   }),
   getCustomersByDate: catchAsync(async (req, res, next) => {
