@@ -10,7 +10,6 @@ const paymentSchema = new mongoose.Schema(
     driver: {
       type: mongoose.Types.ObjectId,
       ref: 'Driver',
-      required: true,
     },
     customer: {
       type: mongoose.Types.ObjectId,
