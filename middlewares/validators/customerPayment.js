@@ -6,8 +6,8 @@ const customerPaymentValidators = {
   addCustomerPayment: (req, res, next) => {
     const schema = Joi.object({
       product: Joi.string()
-        .required()
         .valid('18L', '20L')
+        .when('from', { is: 'Customer', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
@@ -31,6 +31,37 @@ const customerPaymentValidators = {
                 break;
               default:
                 er.message = 'Invalid input for mode of payment';
+            }
+          });
+          return errors;
+        }),
+      from: Joi.string()
+        .required()
+        .valid('Driver', 'Customer')
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Payer is required';
+                break;
+              default:
+                er.message = 'Invalid input for payer';
+            }
+          });
+          return errors;
+        }),
+      to: Joi.string()
+        .required()
+        .valid('Vendor', 'Driver')
+        .when('from', { is: 'Driver', then: Joi.invalid('Driver') })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Payee is required';
+                break;
+              default:
+                er.message = 'Invalid input for payee';
             }
           });
           return errors;
@@ -61,7 +92,7 @@ const customerPaymentValidators = {
         }),
       customer: Joi.string()
         .alphanum()
-        .required()
+        .when('from', { is: 'Customer', then: Joi.required() })
         .custom((value, helpers) => {
           if (!mongoose.isValidObjectId(value)) {
             return helpers.error('any.invalid');
@@ -79,6 +110,30 @@ const customerPaymentValidators = {
                 break;
               default:
                 er.message = 'Invalid input for customer';
+            }
+          });
+          return errors;
+        }),
+      driver: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Driver is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid driver. Please enter a valid driver';
+                break;
+              default:
+                er.message = 'Invalid input for driver';
             }
           });
           return errors;

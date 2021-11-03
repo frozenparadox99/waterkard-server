@@ -252,6 +252,15 @@ const customerValidators = {
           });
           return errors;
         }),
+      balancePayment: Joi.number().error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            default:
+              er.message = 'Invalid input for balance payment';
+          }
+        });
+        return errors;
+      }),
       dispenser: Joi.number()
         .min(0)
         .required()
