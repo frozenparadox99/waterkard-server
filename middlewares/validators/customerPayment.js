@@ -116,7 +116,6 @@ const customerPaymentValidators = {
         }),
       driver: Joi.string()
         .alphanum()
-        .required()
         .custom((value, helpers) => {
           if (!mongoose.isValidObjectId(value)) {
             return helpers.error('any.invalid');
@@ -126,12 +125,6 @@ const customerPaymentValidators = {
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
-              case 'any.required':
-                er.message = 'Driver is required';
-                break;
-              case 'any.invalid':
-                er.message = 'Invalid driver. Please enter a valid driver';
-                break;
               default:
                 er.message = 'Invalid input for driver';
             }

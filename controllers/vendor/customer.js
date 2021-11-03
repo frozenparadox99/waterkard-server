@@ -580,6 +580,42 @@ const customerController = {
               },
             },
           ],
+          balance: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                vendor: 1,
+                name: 1,
+                balancePayment: 1,
+                _id: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: 'customerproducts',
+                localField: '_id',
+                foreignField: 'customer',
+                as: 'customerProducts',
+              },
+            },
+            {
+              $unwind: {
+                path: '$customerProducts',
+                preserveNullAndEmptyArrays: false,
+              },
+            },
+            {
+              $group: {
+                _id: '$_id',
+                totalBalance: {
+                  $sum: '$customerProducts.balanceJars',
+                },
+                name: { $first: '$name' },
+              },
+            },
+          ],
           mobileNumbers: [
             {
               ...customerMatchStage,
@@ -639,6 +675,10 @@ const customerController = {
         customers[0].addresses.filter(
           ele => ele._id.toString() === el._id.toString()
         )[0]?.address || undefined;
+      const balanceRes =
+        customers[0].balance.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0] || undefined;
       if (!details) {
         details = {
           totalEmptyCollected: 0,
@@ -652,6 +692,7 @@ const customerController = {
       details.driver = driverRes;
       details.mobileNumber = mobileRes;
       details.address = addressRes;
+      details.totalBalance = balanceRes;
       return {
         ...el,
         ...details,
