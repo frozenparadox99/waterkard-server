@@ -270,7 +270,7 @@ const paymentController = {
       return next(new APIError('Invalid date', 400));
     }
     const currentCustomer = await Customer.findById(customer);
-    if (!currentCustomer) {
+    if (!currentCustomer && customer) {
       return next(new APIError('Customer does not exist', 400));
     }
     const session = await mongoose.startSession();
@@ -282,7 +282,7 @@ const paymentController = {
           {
             vendor,
             driver,
-            customer,
+            customer: customer || undefined,
             from,
             to,
             product,
