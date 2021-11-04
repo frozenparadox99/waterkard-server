@@ -273,12 +273,12 @@ const customerController = {
         [
           {
             product,
-            balanceJars,
-            dispenser,
-            deposit,
-            rate,
+            balanceJars: parseInt(balanceJars, 10),
+            dispenser: parseInt(dispenser, 10),
+            deposit: parseInt(deposit, 10),
+            rate: parseInt(rate, 10),
             customer,
-            balancePayment,
+            balancePayment: parseInt(balancePayment, 10),
           },
         ],
         { session }
@@ -305,7 +305,7 @@ const customerController = {
         totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
         totalInv.godownBottleJarStock -= parseInt(balanceJars, 10);
       }
-      cust.balancePayment += balancePayment;
+      cust.balancePayment += parseInt(balancePayment, 10);
       await cust.save();
       await totalInv.save();
       // commit the changes if everything was successful

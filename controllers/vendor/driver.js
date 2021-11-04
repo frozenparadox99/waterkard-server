@@ -158,8 +158,10 @@ const driverController = {
       if (status === 'completed') {
         customerProduct.balanceJars +=
           parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
-        customerProduct.balancePayment += soldJars * customerProduct.rate;
-        currentCustomer.balancePayment += soldJars * customerProduct.rate;
+        customerProduct.balancePayment +=
+          parseInt(soldJars, 10) * customerProduct.rate;
+        currentCustomer.balancePayment +=
+          parseInt(soldJars, 10) * customerProduct.rate;
         await currentCustomer.save();
         await customerProduct.save();
         await totalInventory.save();
@@ -202,8 +204,10 @@ const driverController = {
     if (status === 'completed') {
       customerProduct.balanceJars +=
         parseInt(soldJars, 10) - parseInt(emptyCollected, 10);
-      customerProduct.balancePayment += soldJars * customerProduct.rate;
-      currentCustomer.balancePayment += soldJars * customerProduct.rate;
+      customerProduct.balancePayment +=
+        parseInt(soldJars, 10) * customerProduct.rate;
+      currentCustomer.balancePayment +=
+        parseInt(soldJars, 10) * customerProduct.rate;
       await currentCustomer.save();
       await totalInventory.save();
       await customerProduct.save();
