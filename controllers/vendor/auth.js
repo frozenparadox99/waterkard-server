@@ -749,7 +749,7 @@ const authController = {
                         $and: [
                           { $eq: ['$vendor', '$$vendor'] },
                           { $eq: ['$date', date.data] },
-                          { $eq: ['completed', false] },
+                          { $eq: ['$completed', false] },
                         ],
                       },
                     },
