@@ -327,6 +327,16 @@ const inventoryController = {
           )
         );
       }
+      const dailyJarAndPayment = await DailyJarAndPayment.findOne(
+        {
+          vendor,
+          driver,
+          date: date.data,
+          completed: false,
+        },
+        null,
+        { session }
+      );
       if (
         Number.isNaN(parseInt(dailyInventory.expectedReturned18, 10)) ||
         Number.isNaN(parseInt(dailyInventory.expectedReturned20, 10)) ||
@@ -362,6 +372,8 @@ const inventoryController = {
       totalInv.missingBottleJars +=
         parseInt(dailyInventory.missingReturned20, 10) +
         parseInt(dailyInventory.missingEmpty20, 10);
+      dailyJarAndPayment.completed = true;
+      await dailyJarAndPayment.save();
       await dailyInventory.save();
       await totalInv.save();
       await session.commitTransaction();

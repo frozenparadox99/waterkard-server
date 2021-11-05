@@ -40,6 +40,10 @@ const dailyJarAndPaymentSchema = new mongoose.Schema(
         },
       },
     ],
+    completed: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     versionKey: false,
