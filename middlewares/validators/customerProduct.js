@@ -116,6 +116,15 @@ const customerProductValidators = {
           });
           return errors;
         }),
+      balancePayment: Joi.number().error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            default:
+              er.message = 'Invalid input for balance payment';
+          }
+        });
+        return errors;
+      }),
     });
     const result = schema.validate(req.body, {
       abortEarly: false,

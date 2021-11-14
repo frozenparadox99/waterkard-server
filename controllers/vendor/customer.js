@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Customer = require('../../models/customerModel');
 const CustomerProduct = require('../../models/customerProductModel');
 const Order = require('../../models/orderModel');
+const TotalInventory = require('../../models/totalInventoryModel');
+const Driver = require('../../models/driverModel');
 const dateHelpers = require('../../helpers/date.helpers');
 const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
@@ -25,6 +27,7 @@ const customerController = {
       dispenser,
       deposit,
       rate,
+      balancePayment,
     } = req.body;
 
     let customer;
@@ -34,6 +37,17 @@ const customerController = {
     session.startTransaction();
 
     try {
+      const totalInv = await TotalInventory.findOne({ vendor }, null, {
+        session,
+      });
+      if (!totalInv) {
+        return next(
+          new APIError(
+            'Inventory does not exist for this vendor. Please create it first',
+            400
+          )
+        );
+      }
       customer = await Customer.create(
         [
           {
@@ -47,6 +61,7 @@ const customerController = {
             pincode,
             group,
             vendor,
+            balancePayment,
           },
         ],
         { session }
@@ -61,11 +76,34 @@ const customerController = {
             deposit,
             rate,
             customer: customer[0]._id,
+            balancePayment,
           },
         ],
         { session }
       );
-
+      if (
+        product === '18L' &&
+        totalInv.godownCoolJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
+      if (
+        product === '20L' &&
+        totalInv.godownBottleJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
+      if (product === '18L') {
+        totalInv.customerCoolJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownCoolJarStock -= parseInt(balanceJars, 10);
+      }
+      if (product === '20L') {
+        totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownBottleJarStock -= parseInt(balanceJars, 10);
+      }
+      await totalInv.save();
       // commit the changes if everything was successful
       await session.commitTransaction();
     } catch (error) {
@@ -86,6 +124,20 @@ const customerController = {
     }
 
     return successfulRequest(res, 201, { customer: customer[0] });
+  }),
+  getCustomer: catchAsync(async (req, res, next) => {
+    const { customer: customerId, vendor } = req.query;
+    if (
+      !mongoose.isValidObjectId(customerId) ||
+      !mongoose.isValidObjectId(vendor)
+    ) {
+      return next(new APIError('Invalid customer or vendor', 400));
+    }
+    const customer = await Customer.findOne({ _id: customerId, vendor });
+    if (!customer) {
+      return next(new APIError('Customer does not exist', 400));
+    }
+    return successfulRequest(res, 200, { customer });
   }),
   updateCustomer: catchAsync(async (req, res, next) => {
     const {
@@ -153,14 +205,23 @@ const customerController = {
     return next(new APIError("Customers' groups not updated", 500));
   }),
   addCustomerProduct: catchAsync(async (req, res, next) => {
-    const { product, balanceJars, dispenser, deposit, rate, customer } =
-      req.body;
-
+    const {
+      product,
+      balanceJars,
+      dispenser,
+      deposit,
+      rate,
+      customer,
+      balancePayment,
+    } = req.body;
+    const cust = await Customer.findById(customer);
+    if (!cust) {
+      return next(new APIError('Customer does not exist', 400));
+    }
     // 1) Get products for the current customer
     const currentProductsForCustomer = await CustomerProduct.find({
       customer,
     });
-    console.log(currentProductsForCustomer);
 
     // 2) Check the number of products. If it is 2 then no more can be added.
     if (
@@ -193,20 +254,60 @@ const customerController = {
     session.startTransaction();
 
     try {
+      const totalInv = await TotalInventory.findOne(
+        { vendor: cust.vendor },
+        null,
+        {
+          session,
+        }
+      );
+      if (!totalInv) {
+        return next(
+          new APIError(
+            'Inventory does not exist for this vendor. Please create it first',
+            400
+          )
+        );
+      }
       const customerProduct = await CustomerProduct.create(
         [
           {
             product,
-            balanceJars,
-            dispenser,
-            deposit,
-            rate,
+            balanceJars: parseInt(balanceJars, 10),
+            dispenser: parseInt(dispenser, 10),
+            deposit: parseInt(deposit, 10),
+            rate: parseInt(rate, 10),
             customer,
+            balancePayment: parseInt(balancePayment, 10),
           },
         ],
         { session }
       );
-
+      if (
+        product === '18L' &&
+        totalInv.godownCoolJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
+      if (
+        product === '20L' &&
+        totalInv.godownBottleJarStock < parseInt(balanceJars, 10)
+      ) {
+        await session.abortTransaction();
+        return next(new APIError('Not enough stock. Please try again', 400));
+      }
+      if (product === '18L') {
+        totalInv.customerCoolJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownCoolJarStock -= parseInt(balanceJars, 10);
+      }
+      if (product === '20L') {
+        totalInv.customerBottleJarBalance += parseInt(balanceJars, 10);
+        totalInv.godownBottleJarStock -= parseInt(balanceJars, 10);
+      }
+      cust.balancePayment += parseInt(balancePayment, 10);
+      await cust.save();
+      await totalInv.save();
       // commit the changes if everything was successful
       await session.commitTransaction();
     } catch (error) {
@@ -242,9 +343,6 @@ const customerController = {
   }),
   getCustomers: catchAsync(async (req, res, next) => {
     const { vendor, group, product, date, typeOfCustomer } = req.query;
-    const page = parseInt(req.query.page || 1, 10);
-    const skip = (page - 1) * 20;
-    const limit = 20;
     const parsedDate = dateHelpers.createDateFromString(date || '');
     if (!parsedDate.success) {
       return next(new APIError('Invalid date', 400));
@@ -272,6 +370,12 @@ const customerController = {
         },
       ],
     };
+    const customerGroupStage = {};
+    if (date) {
+      customerGroupStage.status = {
+        $first: '$jarAndPayments.transactions.status',
+      };
+    }
     const finalMatch = {
       $match: {
         $expr: {
@@ -329,18 +433,13 @@ const customerController = {
                 vendor: 1,
                 name: 1,
                 group: 1,
+                createdAt: 1,
               },
             },
             {
               $sort: {
-                name: -1,
+                createdAt: -1,
               },
-            },
-            {
-              $skip: skip,
-            },
-            {
-              $limit: limit,
             },
             {
               $lookup: {
@@ -366,7 +465,8 @@ const customerController = {
             },
             {
               $group: {
-                _id: '$jarAndPayments.transactions.customer',
+                _id: '$_id',
+                ...customerGroupStage,
                 totalEmptyCollected: {
                   $sum: '$jarAndPayments.transactions.emptyCollected',
                 },
@@ -463,19 +563,34 @@ const customerController = {
               $project: {
                 vendor: 1,
                 name: 1,
+                balancePayment: 1,
                 _id: 1,
               },
             },
             {
               $sort: {
-                name: -1,
+                createdAt: -1,
               },
             },
             {
-              $skip: skip,
+              $group: {
+                _id: '$_id',
+                name: { $first: '$name' },
+                balancePayment: { $first: '$balancePayment' },
+              },
+            },
+          ],
+          balance: [
+            {
+              ...customerMatchStage,
             },
             {
-              $limit: limit,
+              $project: {
+                vendor: 1,
+                name: 1,
+                balancePayment: 1,
+                _id: 1,
+              },
             },
             {
               $lookup: {
@@ -494,13 +609,46 @@ const customerController = {
             {
               $group: {
                 _id: '$_id',
-                totalDeposit: {
-                  $sum: '$customerProducts.deposit',
-                },
                 totalBalance: {
                   $sum: '$customerProducts.balanceJars',
                 },
                 name: { $first: '$name' },
+              },
+            },
+          ],
+          mobileNumbers: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                vendor: 1,
+                name: 1,
+                group: 1,
+                mobileNumber: 1,
+              },
+            },
+            {
+              $sort: {
+                name: -1,
+              },
+            },
+          ],
+          addresses: [
+            {
+              ...customerMatchStage,
+            },
+            {
+              $project: {
+                vendor: 1,
+                name: 1,
+                group: 1,
+                address: 1,
+              },
+            },
+            {
+              $sort: {
+                name: -1,
               },
             },
           ],
@@ -519,22 +667,45 @@ const customerController = {
         customers[0].drivers.filter(
           ele => ele._id.toString() === el._id.toString()
         )[0]?.driver?._id || undefined;
+      const mobileRes =
+        customers[0].mobileNumbers.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0]?.mobileNumber || undefined;
+      const addressRes =
+        customers[0].addresses.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0]?.address || undefined;
+      const balanceRes =
+        customers[0].balance.filter(
+          ele => ele._id.toString() === el._id.toString()
+        )[0].totalBalance || undefined;
       if (!details) {
         details = {
           totalEmptyCollected: 0,
           totalSold: 0,
         };
       }
+      if (date && !details.status) {
+        details.status = 'pending';
+      }
       details.group = groupRes;
       details.driver = driverRes;
+      details.mobileNumber = mobileRes;
+      details.address = addressRes;
+      details.totalBalance = balanceRes;
       return {
         ...el,
         ...details,
       };
     });
+    const statusData = {
+      pending: 1,
+      skipped: 2,
+      completed: 3,
+    };
+    customersFinal.sort((a, b) => statusData[a.status] - statusData[b.status]);
     return successfulRequest(res, 200, {
       customers: customersFinal,
-      final: customers[0].deposits.length < limit,
     });
   }),
   getCustomersByDate: catchAsync(async (req, res, next) => {
@@ -826,6 +997,69 @@ const customerController = {
     return successfulRequest(res, 200, {
       customers: customersFinal,
       final: customers[0].deposits.length < limit,
+    });
+  }),
+  getCustomerDeposits: catchAsync(async (req, res, next) => {
+    const { vendor, driver: driverId } = req.query;
+    let driver = null;
+    if (driverId) {
+      driver = await Driver.findById(driverId, { group: 1 });
+    }
+    if (!driver && driverId) {
+      return next(new APIError('Driver not found', 400));
+    }
+    const filter = driver ? { vendor, group: driver.group } : { vendor };
+    const customers = await Customer.find(
+      { ...filter },
+      {
+        name: 1,
+        mobileNumber: 1,
+      }
+    );
+    if (customers.length === 0) {
+      return next(
+        new APIError(
+          "You don't have any customers. Please add a customer first",
+          400
+        )
+      );
+    }
+    const customerIds = [];
+    customers.forEach(ele => {
+      customerIds.push(ele._id);
+    });
+    const customerProducts = await CustomerProduct.find(
+      {
+        customer: { $in: customerIds },
+      },
+      { deposit: 1, product: 1, customer: 1 }
+    );
+    const customersFinal = [];
+    let total18 = 0;
+    let total20 = 0;
+    customers.forEach(ele => {
+      const products = customerProducts.filter(
+        el => el.customer.toString() === ele._id.toString()
+      );
+      customersFinal.push({
+        _id: ele._id,
+        name: ele.name,
+        mobileNumber: ele.mobileNumber,
+        products,
+      });
+      products.forEach(el => {
+        if (el.product === '18L') {
+          total18 += el.deposit;
+        }
+        if (el.product === '20L') {
+          total20 += el.deposit;
+        }
+      });
+    });
+    return successfulRequest(res, 200, {
+      customers: customersFinal,
+      total18,
+      total20,
     });
   }),
 };

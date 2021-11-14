@@ -2,8 +2,8 @@ const Joi = require('joi');
 const mongoose = require('mongoose');
 const { failedRequestWithErrors } = require('../../utils/responses');
 
-const customerPaymentValidators = {
-  addCustomerPayment: (req, res, next) => {
+const driverPaymentValidators = {
+  addDriverPayment: (req, res, next) => {
     const schema = Joi.object({
       product: Joi.string()
         .valid('18L', '20L')
@@ -116,6 +116,7 @@ const customerPaymentValidators = {
         }),
       driver: Joi.string()
         .alphanum()
+        .required()
         .custom((value, helpers) => {
           if (!mongoose.isValidObjectId(value)) {
             return helpers.error('any.invalid');
@@ -125,6 +126,12 @@ const customerPaymentValidators = {
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
+              case 'any.required':
+                er.message = 'Driver is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid driver. Please enter a valid driver';
+                break;
               default:
                 er.message = 'Invalid input for driver';
             }
@@ -208,7 +215,7 @@ const customerPaymentValidators = {
     }
     return next();
   },
-  getCustomerInvoice: (req, res, next) => {
+  getDriverPayments: (req, res, next) => {
     const schema = Joi.object({
       vendor: Joi.string()
         .alphanum()
@@ -230,68 +237,6 @@ const customerPaymentValidators = {
                 break;
               default:
                 er.message = 'Invalid input for vendor';
-            }
-          });
-          return errors;
-        }),
-      customer: Joi.string()
-        .alphanum()
-        .required()
-        .custom((value, helpers) => {
-          if (!mongoose.isValidObjectId(value)) {
-            return helpers.error('any.invalid');
-          }
-          return value;
-        })
-        .error(errors => {
-          errors.forEach(er => {
-            switch (er.code) {
-              case 'any.required':
-                er.message = 'Customer is required';
-                break;
-              case 'any.invalid':
-                er.message = 'Invalid customer. Please enter a valid customer';
-                break;
-              default:
-                er.message = 'Invalid input for customer';
-            }
-          });
-          return errors;
-        }),
-      startDate: Joi.string()
-        .required()
-        .trim()
-        .pattern(new RegExp(/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/i))
-        .error(errors => {
-          errors.forEach(er => {
-            switch (er.code) {
-              case 'any.required':
-                er.message = 'Date is required';
-                break;
-              case 'string.pattern.base':
-                er.message = 'Invalid date';
-                break;
-              default:
-                er.message = 'Invalid input for date';
-            }
-          });
-          return errors;
-        }),
-      endDate: Joi.string()
-        .required()
-        .trim()
-        .pattern(new RegExp(/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/i))
-        .error(errors => {
-          errors.forEach(er => {
-            switch (er.code) {
-              case 'any.required':
-                er.message = 'Date is required';
-                break;
-              case 'string.pattern.base':
-                er.message = 'Invalid date';
-                break;
-              default:
-                er.message = 'Invalid input for date';
             }
           });
           return errors;
@@ -309,9 +254,9 @@ const customerPaymentValidators = {
     }
     return next();
   },
-  getAllCustomerPayments: (req, res, next) => {
+  getDriverPaymentsByDriver: (req, res, next) => {
     const schema = Joi.object({
-      vendor: Joi.string()
+      driver: Joi.string()
         .alphanum()
         .required()
         .custom((value, helpers) => {
@@ -324,36 +269,13 @@ const customerPaymentValidators = {
           errors.forEach(er => {
             switch (er.code) {
               case 'any.required':
-                er.message = 'Vendor is required';
+                er.message = 'Driver is required';
                 break;
               case 'any.invalid':
-                er.message = 'Invalid vendor. Please enter a valid vendor';
+                er.message = 'Invalid driver. Please enter a valid driver';
                 break;
               default:
-                er.message = 'Invalid input for vendor';
-            }
-          });
-          return errors;
-        }),
-      driver: Joi.string()
-        .alphanum()
-        .custom((value, helpers) => {
-          if (!mongoose.isValidObjectId(value)) {
-            return helpers.error('any.invalid');
-          }
-          return value;
-        })
-        .error(errors => {
-          errors.forEach(er => {
-            switch (er.code) {
-              case 'any.required':
-                er.message = 'Customer is required';
-                break;
-              case 'any.invalid':
-                er.message = 'Invalid customer. Please enter a valid customer';
-                break;
-              default:
-                er.message = 'Invalid input for customer';
+                er.message = 'Invalid input for driver';
             }
           });
           return errors;
@@ -373,4 +295,4 @@ const customerPaymentValidators = {
   },
 };
 
-module.exports = customerPaymentValidators;
+module.exports = driverPaymentValidators;

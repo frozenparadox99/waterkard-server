@@ -252,6 +252,15 @@ const customerValidators = {
           });
           return errors;
         }),
+      balancePayment: Joi.number().error(errors => {
+        errors.forEach(er => {
+          switch (er.code) {
+            default:
+              er.message = 'Invalid input for balance payment';
+          }
+        });
+        return errors;
+      }),
       dispenser: Joi.number()
         .min(0)
         .required()
@@ -687,6 +696,104 @@ const customerValidators = {
       updatedCustomersGroups: Joi.array().items(obj),
     });
     const result = schema.validate(req.body, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
+  getCustomerProducts: (req, res, next) => {
+    const schema = Joi.object({
+      customerId: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Customer is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid customer. Please enter a valid customer';
+                break;
+              default:
+                er.message = 'Invalid input for customer';
+            }
+          });
+          return errors;
+        }),
+    });
+    const result = schema.validate(req.query, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
+  getCustomerDeposits: (req, res, next) => {
+    const schema = Joi.object({
+      driver: Joi.string()
+        .alphanum()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.invalid':
+                er.message = 'Invalid driver. Please enter a valid driver';
+                break;
+              default:
+                er.message = 'Invalid input for driver';
+            }
+          });
+          return errors;
+        }),
+      vendor: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Vendor is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid vendor. Please enter a valid vendor';
+                break;
+              default:
+                er.message = 'Invalid input for vendor';
+            }
+          });
+          return errors;
+        }),
+    });
+    const result = schema.validate(req.query, {
       abortEarly: false,
     });
     if (result?.error?.details?.length > 0) {

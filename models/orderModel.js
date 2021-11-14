@@ -20,7 +20,6 @@ const orderSchema = new mongoose.Schema(
     driver: {
       type: mongoose.Types.ObjectId,
       ref: 'Driver',
-      required: true,
     },
     product: {
       type: mongoose.Types.ObjectId,

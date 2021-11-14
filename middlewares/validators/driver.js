@@ -174,11 +174,16 @@ const driverValidators = {
           });
           return errors;
         }),
+      status: Joi.string().required().valid('skipped', 'completed'),
       soldJars: Joi.number()
         .min(0)
+        .when('status', { is: 'completed', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
+              case 'any.required':
+                er.message = 'Sold jars are required';
+                break;
               default:
                 er.message = 'Invalid input for sold jars';
             }
@@ -187,9 +192,13 @@ const driverValidators = {
         }),
       emptyCollected: Joi.number()
         .min(0)
+        .when('status', { is: 'completed', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
+              case 'any.required':
+                er.message = 'Empty jars are required';
+                break;
               default:
                 er.message = 'Invalid input for empty jars collected';
             }
@@ -197,8 +206,8 @@ const driverValidators = {
           return errors;
         }),
       product: Joi.string()
-        .required()
         .valid('18L', '20L')
+        .when('status', { is: 'completed', then: Joi.required() })
         .error(errors => {
           errors.forEach(er => {
             switch (er.code) {
@@ -230,21 +239,21 @@ const driverValidators = {
           });
           return errors;
         }),
-    })
-      .or('soldJars', 'emptyCollected')
-      .error(errors => {
-        errors.forEach(er => {
-          switch (er.code) {
-            case 'object.missing':
-              er.message =
-                'Either sold jars or empty jars collected is required';
-              break;
-            default:
-              break;
-          }
-        });
-        return errors;
-      });
+    });
+    // .or('soldJars', 'emptyCollected')
+    // .error(errors => {
+    //   errors.forEach(er => {
+    //     switch (er.code) {
+    //       case 'object.missing':
+    //         er.message =
+    //           'Either sold jars or empty jars collected is required';
+    //         break;
+    //       default:
+    //         break;
+    //     }
+    //   });
+    //   return errors;
+    // });
     const result = schema.validate(req.body, {
       abortEarly: false,
     });
@@ -294,6 +303,102 @@ const driverValidators = {
         }),
     });
     const result = schema.validate(req.body, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
+  getCustomers: (req, res, next) => {
+    const schema = Joi.object({
+      driver: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Driver is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid driver. Please enter a valid driver';
+                break;
+              default:
+                er.message = 'Invalid input for driver';
+            }
+          });
+          return errors;
+        }),
+      date: Joi.string()
+        .trim()
+        .pattern(new RegExp(/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/i))
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Date is required';
+                break;
+              case 'string.pattern.base':
+                er.message = 'Invalid date';
+                break;
+              default:
+                er.message = 'Invalid input for date';
+            }
+          });
+          return errors;
+        }),
+    });
+    const result = schema.validate(req.query, {
+      abortEarly: false,
+    });
+    if (result?.error?.details?.length > 0) {
+      const errors = result.error.details.map(el => ({
+        path: el.path[0],
+        message: el.message,
+      }));
+      return failedRequestWithErrors(res, 400, errors);
+    }
+    return next();
+  },
+  getCustomerDetails: (req, res, next) => {
+    const schema = Joi.object({
+      driver: Joi.string()
+        .alphanum()
+        .required()
+        .custom((value, helpers) => {
+          if (!mongoose.isValidObjectId(value)) {
+            return helpers.error('any.invalid');
+          }
+          return value;
+        })
+        .error(errors => {
+          errors.forEach(er => {
+            switch (er.code) {
+              case 'any.required':
+                er.message = 'Driver is required';
+                break;
+              case 'any.invalid':
+                er.message = 'Invalid driver. Please enter a valid driver';
+                break;
+              default:
+                er.message = 'Invalid input for driver';
+            }
+          });
+          return errors;
+        }),
+    });
+    const result = schema.validate(req.query, {
       abortEarly: false,
     });
     if (result?.error?.details?.length > 0) {

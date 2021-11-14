@@ -3,6 +3,7 @@ const APIError = require('../utils/apiError');
 
 const vendorSchema = new mongoose.Schema(
   {
+    // Change group name to group id ref
     defaultGroupName: {
       type: String,
       required: true,

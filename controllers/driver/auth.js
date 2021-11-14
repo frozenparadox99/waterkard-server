@@ -19,7 +19,11 @@ const authController = {
     if (password !== driver.password) {
       return next(new APIError('Incorrect password', 401));
     }
-    return successfulRequest(res, 200, { id: driver._id, name: driver.name });
+    return successfulRequest(res, 200, {
+      id: driver._id,
+      name: driver.name,
+      vendor: driver.vendor,
+    });
   }),
 };
 
