@@ -516,6 +516,10 @@ const inventoryController = {
     if (!dailyInventory) {
       return next(new APIError('This inventory does not exist', 400));
     }
+    // load inventory -> deliver to customers -> unload inventory
+    // deliver to customers -> sell filled jars and/or collect empty jars
+    // load - sold + empty = in vehicles
+    // 20 - 10 + 5 => 15
     const expected = await DailyInventory.aggregate([
       {
         $facet: {

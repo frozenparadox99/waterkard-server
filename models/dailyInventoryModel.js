@@ -58,6 +58,12 @@ const dailyInventorySchema = new mongoose.Schema(
     missingEmpty20: {
       type: Number,
     },
+    sold18: {
+      type: Number,
+    },
+    sold20: {
+      type: Number,
+    },
     date: {
       type: Date,
     },

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+// NOTE - NOT IN USE, TO BE IGNORED. MIGRATED TO PAYMENT MODEL
 const customerPaymentSchema = new mongoose.Schema(
   {
     mode: {

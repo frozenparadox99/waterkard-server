@@ -58,6 +58,7 @@ const driverController = {
     return successfulRequest(res, 201, {});
   }),
   addTransaction: catchAsync(async (req, res, next) => {
+    // bug => loaded < sell
     const {
       vendor,
       driver,
@@ -128,6 +129,8 @@ const driverController = {
       driver,
       date: date.data,
     });
+    // sold18+ soldJars > load18 => return error
+    // sold20 + soldJars > load20 => return error
     if (!dailyJarAndPayment) {
       const transactions = [];
       if (status === 'skipped') {

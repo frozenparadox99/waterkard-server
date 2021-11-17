@@ -6,6 +6,7 @@ const catchAsync = require('../../utils/catchAsync');
 const APIError = require('../../utils/apiError');
 const { successfulRequest } = require('../../utils/responses');
 
+// NOTE - DEPRECATED FEATURE
 const orderController = {
   addOrder: catchAsync(async (req, res, next) => {
     const { customer, product, preferredDate, jarQty, vendor } = req.body;
